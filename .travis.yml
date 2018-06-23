@@ -6,6 +6,10 @@ go:
   - "1.10"
   - master
 
+install:
+  - go get github.com/golang/protobuf/protoc-gen-go
+  - go get -t ./...
+
 script:
   - make proto
   - make test
