@@ -6,5 +6,8 @@ go:
   - "1.10"
   - master
 
+install:
+  - go get -t ./...
+
 script:
   - make test
