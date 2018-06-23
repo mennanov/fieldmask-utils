@@ -1,5 +1,7 @@
 ## Protobuf Field Mask utils for Go
 
+[![Build Status](https://travis-ci.org/mennanov/fieldmask-utils.svg?branch=master)](https://travis-ci.org/mennanov/fieldmask-utils)
+
 Features:
 
 * Copy from any Go struct to any compatible Go struct with a field mask applied
