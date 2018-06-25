@@ -14,6 +14,5 @@ test:
 
 
 test-with-coverage:
-	@go get github.com/rakyll/gotest
-	gotest -p 1 -v -covermode=count -coverprofile=coverage.out ./...
+	go test -v -covermode=count -coverprofile=coverage.out ./...
 	goveralls -coverprofile=coverage.out -service travis-ci -repotoken ${COVERALLS_TOKEN}
