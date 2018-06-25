@@ -2,6 +2,7 @@ package fieldmask_utils
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"reflect"
 	"strings"
 )
@@ -26,11 +27,11 @@ func StructToStruct(mask *Mask, src, dst interface{}) error {
 	for _, fm := range fields {
 		srcField, err := getField(src, fm.fieldName)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("failed to get the field %s from %T", fm.fieldName, src))
 		}
 		dstField, err := getField(dst, fm.fieldName)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("failed to get the field %s from %T", fm.fieldName, dst))
 		}
 
 		dstFieldType := dstField.Type()
@@ -42,7 +43,8 @@ func StructToStruct(mask *Mask, src, dst interface{}) error {
 				continue
 			}
 			if !srcField.Type().Implements(dstFieldType) {
-				return fmt.Errorf("src %T does not implement dst %T", srcField.Interface(), dstField.Interface())
+				return errors.Errorf("src %T does not implement dst %T",
+					srcField.Interface(), dstField.Interface())
 			}
 
 			v := reflect.New(srcField.Elem().Elem().Type())
@@ -102,7 +104,7 @@ func StructToMap(mask *Mask, src interface{}, dst map[string]interface{}) error 
 	for _, fm := range fields {
 		srcField, err := getField(src, fm.fieldName)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("failed to get the field %s from %T", fm.fieldName, src))
 		}
 		switch srcField.Kind() {
 		case reflect.Ptr, reflect.Interface:
@@ -151,7 +153,7 @@ func getField(obj interface{}, name string) (reflect.Value, error) {
 	objValue := reflectValue(obj)
 	field := objValue.FieldByName(name)
 	if !field.IsValid() {
-		return reflect.ValueOf(nil), fmt.Errorf("no such field: %s in obj %T", name, obj)
+		return reflect.ValueOf(nil), errors.Errorf("no such field: %s in obj %T", name, obj)
 	}
 	return field, nil
 }

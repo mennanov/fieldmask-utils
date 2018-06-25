@@ -2,6 +2,7 @@ package fieldmask_utils
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"google.golang.org/genproto/protobuf/field_mask"
 	"strings"
 )
@@ -37,7 +38,7 @@ func (n *Mask) GetField(protoFieldName string) (*MaskField, error) {
 			return v, nil
 		}
 	}
-	return nil, fmt.Errorf("field \"%s\" not found in mask %v", protoFieldName, n)
+	return nil, errors.Errorf("field \"%s\" not found in mask %v", protoFieldName, n)
 }
 
 // MaskField represents a single field node in a Mask.
@@ -64,7 +65,7 @@ func ParseFieldMask(fm *field_mask.FieldMask, mapper FieldNameMapper) (*Mask, er
 		mask := root
 		for _, field := range strings.Split(path, ".") {
 			if field == "" {
-				return nil, fmt.Errorf("invalid field mask format: \"%s\"", path)
+				return nil, errors.Errorf("invalid field mask format: \"%s\"", path)
 			}
 			subNode, err := mask.GetField(field)
 			if err != nil {
