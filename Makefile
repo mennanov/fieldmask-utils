@@ -14,5 +14,4 @@ test:
 
 
 test-with-coverage:
-	go test -v -covermode=count -coverprofile=coverage.out ./...
-	goveralls -coverprofile=coverage.out -service travis-ci -repotoken ${COVERALLS_TOKEN}
+	${GOPATH}/bin/goveralls -service=travis-pro
