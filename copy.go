@@ -14,14 +14,16 @@ type fieldWithMask struct {
 
 // StructToStruct copies `src` struct to `dst` struct using the given mask.
 // Only the fields in the mask will be copied to `dst`.
+// `inMapper` is used to map the fields from the field mask to the `src` struct.
+// `outMapper` is used to map the fields from the `src` to the `dst` struct.
 // `src` and `dst` must be coherent in terms of the field names, but it is not required for them to be of the same type.
-func StructToStruct(mask *Mask, src, dst interface{}) error {
+func StructToStruct(mask *Mask, src, dst interface{}, inMapper, outMapper FieldNameMapper) error {
 	var fields []*fieldWithMask
 	if mask.IsLeaf() {
 		// For en empty field mask: copy all src to dst by artificially creating a mask with all the fields of src.
 		fields = exportedFields(src)
 	} else {
-		fields = fieldsFromMask(mask)
+		fields = fieldsFromMask(mask, inMapper)
 	}
 
 	for _, fm := range fields {
@@ -29,7 +31,7 @@ func StructToStruct(mask *Mask, src, dst interface{}) error {
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to get the field %s from %T", fm.fieldName, src))
 		}
-		dstField, err := getField(dst, fm.fieldName)
+		dstField, err := getField(dst, outMapper(fm.fieldName))
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to get the field %s from %T", fm.fieldName, dst))
 		}
@@ -48,7 +50,7 @@ func StructToStruct(mask *Mask, src, dst interface{}) error {
 			}
 
 			v := reflect.New(srcField.Elem().Elem().Type())
-			if err := StructToStruct(fm.mask, srcField.Interface(), v.Interface()); err != nil {
+			if err := StructToStruct(fm.mask, srcField.Interface(), v.Interface(), inMapper, outMapper); err != nil {
 				return err
 			}
 			dstField.Set(v)
@@ -59,7 +61,7 @@ func StructToStruct(mask *Mask, src, dst interface{}) error {
 				continue
 			}
 			v := reflect.New(dstFieldType.Elem())
-			if err := StructToStruct(fm.mask, srcField.Interface(), v.Interface()); err != nil {
+			if err := StructToStruct(fm.mask, srcField.Interface(), v.Interface(), inMapper, outMapper); err != nil {
 				return err
 			}
 			dstField.Set(v)
@@ -76,7 +78,7 @@ func StructToStruct(mask *Mask, src, dst interface{}) error {
 			for i := 0; i < srcField.Len(); i++ {
 				subValue := srcField.Index(i)
 				newDst := reflect.New(dstFieldType.Elem().Elem())
-				if err := StructToStruct(fm.mask, subValue.Interface(), newDst.Interface()); err != nil {
+				if err := StructToStruct(fm.mask, subValue.Interface(), newDst.Interface(), inMapper, outMapper); err != nil {
 					return err
 				}
 				v.Set(reflect.Append(v, newDst))
@@ -93,13 +95,13 @@ func StructToStruct(mask *Mask, src, dst interface{}) error {
 
 // StructToMap copies `src` struct to the `dst` map.
 // Behavior is similar to `StructToStruct`.
-func StructToMap(mask *Mask, src interface{}, dst map[string]interface{}) error {
+func StructToMap(mask *Mask, src interface{}, dst map[string]interface{}, inMapper, outMapper FieldNameMapper) error {
 	var fields []*fieldWithMask
 	if mask.IsLeaf() {
 		// For en empty field mask: copy all src to dst by artificially creating a mask with all the fields of src.
 		fields = exportedFields(src)
 	} else {
-		fields = fieldsFromMask(mask)
+		fields = fieldsFromMask(mask, inMapper)
 	}
 	for _, fm := range fields {
 		srcField, err := getField(src, fm.fieldName)
@@ -109,23 +111,23 @@ func StructToMap(mask *Mask, src interface{}, dst map[string]interface{}) error 
 		switch srcField.Kind() {
 		case reflect.Ptr, reflect.Interface:
 			if srcField.IsNil() {
-				dst[fm.fieldName] = nil
+				dst[outMapper(fm.fieldName)] = nil
 				continue
 			}
 			v := make(map[string]interface{})
-			if err := StructToMap(fm.mask, srcField.Interface(), v); err != nil {
+			if err := StructToMap(fm.mask, srcField.Interface(), v, inMapper, outMapper); err != nil {
 				return err
 			}
-			dst[fm.fieldName] = v
+			dst[outMapper(fm.fieldName)] = v
 
 		case reflect.Array, reflect.Slice:
 			// Check if it is an array of values (non-pointers).
 			if srcField.Type().Elem().Kind() != reflect.Ptr {
 				// Handle this array/slice as a regular non-nested data structure: copy it entirely to dst.
 				if srcField.Len() > 0 {
-					dst[fm.fieldName] = srcField.Interface()
+					dst[outMapper(fm.fieldName)] = srcField.Interface()
 				} else {
-					dst[fm.fieldName] = []interface{}(nil)
+					dst[outMapper(fm.fieldName)] = []interface{}(nil)
 				}
 				continue
 			}
@@ -134,16 +136,16 @@ func StructToMap(mask *Mask, src interface{}, dst map[string]interface{}) error 
 			for i := 0; i < srcField.Len(); i++ {
 				subValue := srcField.Index(i)
 				newDst := make(map[string]interface{})
-				if err := StructToMap(fm.mask, subValue.Interface(), newDst); err != nil {
+				if err := StructToMap(fm.mask, subValue.Interface(), newDst, inMapper, outMapper); err != nil {
 					return err
 				}
 				v = append(v, newDst)
 			}
-			dst[fm.fieldName] = v
+			dst[outMapper(fm.fieldName)] = v
 
 		default:
 			// Set a value on a map.
-			dst[fm.fieldName] = srcField.Interface()
+			dst[outMapper(fm.fieldName)] = srcField.Interface()
 		}
 	}
 	return nil
@@ -170,10 +172,10 @@ func reflectValue(obj interface{}) reflect.Value {
 	return val
 }
 
-func fieldsFromMask(mask *Mask) []*fieldWithMask {
+func fieldsFromMask(mask *Mask, mapper FieldNameMapper) []*fieldWithMask {
 	var fields []*fieldWithMask
-	for _, n := range *mask {
-		fields = append(fields, &fieldWithMask{fieldName: n.GoFieldName, mask: n.Mask})
+	for f, m := range *mask {
+		fields = append(fields, &fieldWithMask{fieldName: mapper(f), mask: m})
 	}
 	return fields
 }

@@ -1,14 +1,13 @@
 package fieldmask_utils_test
 
 import (
-	"github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/mennanov/fieldmask-utils"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/genproto/protobuf/field_mask"
 	"testing"
 )
 
-func TestParseFieldMaskSuccess(t *testing.T) {
+func TestMaskFromProtoFieldMaskSuccess(t *testing.T) {
 	testCases := []struct {
 		mask         *field_mask.FieldMask
 		expectedTree string
@@ -35,13 +34,13 @@ func TestParseFieldMaskSuccess(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		mask, err := fieldmask_utils.ParseFieldMask(testCase.mask, generator.CamelCase)
+		mask, err := fieldmask_utils.MaskFromProtoFieldMask(testCase.mask)
 		assert.Nil(t, err)
-		assert.Equal(t, testCase.expectedTree, mask.String())
+		assert.Equal(t, fieldmask_utils.MaskFromString(testCase.expectedTree), mask)
 	}
 }
 
-func TestParseFieldMaskFailure(t *testing.T) {
+func TestMaskFromProtoFieldMaskFailure(t *testing.T) {
 	testCases := []*field_mask.FieldMask{
 		{Paths: []string{"a", ".a"}},
 		{Paths: []string{"."}},
@@ -49,27 +48,65 @@ func TestParseFieldMaskFailure(t *testing.T) {
 	}
 
 	for _, fieldMask := range testCases {
-		_, err := fieldmask_utils.ParseFieldMask(fieldMask, generator.CamelCase)
+		_, err := fieldmask_utils.MaskFromProtoFieldMask(fieldMask)
 		assert.NotNil(t, err)
 	}
 }
 
 func TestMaskFromString(t *testing.T) {
 	testCases := []struct {
-		Input  string
-		Output string
-		Length int
+		input        string
+		expectedMask *fieldmask_utils.Mask
+		length       int
 	}{
-		{"foo,bar{c{d,e{f,g,h}}}", "foo,bar{c{d,e{f,g,h}}}", 2},
-		{"foo, bar{c {d,e{f,\ng,h}}},t", "foo,bar{c{d,e{f,g,h}}},t", 3},
-		{"foo", "foo", 1},
-		{"foo,bar", "foo,bar", 2},
-		{"foo,bar{c},d,e", "foo,bar{c},d,e", 4},
-		{"", "", 0},
+		{
+			"foo,bar{c{d,e{f,g,h}}}",
+			&fieldmask_utils.Mask{
+				"foo": &fieldmask_utils.Mask{},
+				"bar": &fieldmask_utils.Mask{
+					"c": &fieldmask_utils.Mask{
+						"d": &fieldmask_utils.Mask{},
+						"e": &fieldmask_utils.Mask{
+							"f": &fieldmask_utils.Mask{},
+							"g": &fieldmask_utils.Mask{},
+							"h": &fieldmask_utils.Mask{},
+						},
+					},
+				},
+			}, 2,
+		},
+		{"foo, bar{c {d,e{f,\ng,h}}},t", &fieldmask_utils.Mask{
+			"foo": &fieldmask_utils.Mask{},
+			"bar": &fieldmask_utils.Mask{
+				"c": &fieldmask_utils.Mask{
+					"d": &fieldmask_utils.Mask{},
+					"e": &fieldmask_utils.Mask{
+						"f": &fieldmask_utils.Mask{},
+						"g": &fieldmask_utils.Mask{},
+						"h": &fieldmask_utils.Mask{},
+					},
+				},
+			},
+			"t": &fieldmask_utils.Mask{},
+		}, 3},
+		{"foo", &fieldmask_utils.Mask{"foo": &fieldmask_utils.Mask{}}, 1},
+		{"foo,bar", &fieldmask_utils.Mask{
+			"foo": &fieldmask_utils.Mask{},
+			"bar": &fieldmask_utils.Mask{},
+		}, 2},
+		{"foo,bar{c},d,e", &fieldmask_utils.Mask{
+			"foo": &fieldmask_utils.Mask{},
+			"bar": &fieldmask_utils.Mask{
+				"c": &fieldmask_utils.Mask{},
+			},
+			"d": &fieldmask_utils.Mask{},
+			"e": &fieldmask_utils.Mask{},
+		}, 4},
+		{"", &fieldmask_utils.Mask{}, 0},
 	}
 	for _, testCase := range testCases {
-		mask := fieldmask_utils.MaskFromString(testCase.Input, generator.CamelCase)
-		assert.Equal(t, testCase.Output, mask.String())
-		assert.Equal(t, testCase.Length, len(*mask))
+		mask := fieldmask_utils.MaskFromString(testCase.input)
+		assert.Equal(t, testCase.expectedMask, mask)
+		assert.Equal(t, testCase.length, len(*mask))
 	}
 }

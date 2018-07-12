@@ -86,8 +86,8 @@ func init() {
 func TestStructToStructProtoSuccess(t *testing.T) {
 	userDst := &testproto.User{}
 	mask := fieldmask_utils.MaskFromString(
-		"id,avatar{original_url},tags,images,permissions,friends{images{resized_url}},name{male_name}", generator.CamelCase)
-	err := fieldmask_utils.StructToStruct(mask, testUserFull, userDst)
+		"id,avatar{original_url},tags,images,permissions,friends{images{resized_url}},name{male_name}")
+	err := fieldmask_utils.StructToStruct(mask, testUserFull, userDst, generator.CamelCase, stringEye)
 	assert.Nil(t, err)
 	assert.Equal(t, testUserFull.Id, userDst.Id)
 	assert.Equal(t, testUserFull.Avatar.OriginalUrl, userDst.Avatar.OriginalUrl)
@@ -108,8 +108,8 @@ func TestStructToStructProtoSuccess(t *testing.T) {
 
 func TestStructToStructEmptyMaskSuccess(t *testing.T) {
 	userDst := &testproto.User{}
-	mask := fieldmask_utils.MaskFromString("", generator.CamelCase)
-	err := fieldmask_utils.StructToStruct(mask, testUserFull, userDst)
+	mask := fieldmask_utils.MaskFromString("")
+	err := fieldmask_utils.StructToStruct(mask, testUserFull, userDst, generator.CamelCase, stringEye)
 	assert.Nil(t, err)
 	assert.Equal(t, testUserFull, userDst)
 }
@@ -117,8 +117,8 @@ func TestStructToStructEmptyMaskSuccess(t *testing.T) {
 func TestStructToStructPartialProtoSuccess(t *testing.T) {
 	userDst := &testproto.User{}
 	mask := fieldmask_utils.MaskFromString(
-		"id,avatar{original_url},images,username,permissions,name{male_name}", generator.CamelCase)
-	err := fieldmask_utils.StructToStruct(mask, testUserPartial, userDst)
+		"id,avatar{original_url},images,username,permissions,name{male_name}")
+	err := fieldmask_utils.StructToStruct(mask, testUserPartial, userDst, generator.CamelCase, stringEye)
 	assert.Nil(t, err)
 	assert.Equal(t, testUserPartial.Id, userDst.Id)
 	assert.Equal(t, testUserPartial.Username, userDst.Username)
@@ -127,8 +127,8 @@ func TestStructToStructPartialProtoSuccess(t *testing.T) {
 
 func TestStructToStructProtoFail(t *testing.T) {
 	userDst := &testproto.User{}
-	mask := fieldmask_utils.MaskFromString("id,avatar{unknown_field},tags", generator.CamelCase)
-	err := fieldmask_utils.StructToStruct(mask, testUserFull, userDst)
+	mask := fieldmask_utils.MaskFromString("id,avatar{unknown_field},tags")
+	err := fieldmask_utils.StructToStruct(mask, testUserFull, userDst, generator.CamelCase, stringEye)
 	assert.NotNil(t, err)
 }
 
@@ -153,8 +153,8 @@ func TestStructToStructProtoDifferentInterfacesFail(t *testing.T) {
 	userDst := &testproto.User{}
 	userSrc := &CustomUser{Name: &FemaleName{FemaleName: "Dana"}}
 
-	mask := fieldmask_utils.MaskFromString("name", generator.CamelCase)
-	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst)
+	mask := fieldmask_utils.MaskFromString("name")
+	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst, generator.CamelCase, stringEye)
 	assert.NotNil(t, err)
 }
 
@@ -173,8 +173,8 @@ func TestStructToStructProtoSameInterfacesSuccess(t *testing.T) {
 
 	user2 := &User2{}
 
-	mask := fieldmask_utils.MaskFromString("stringer", generator.CamelCase)
-	err := fieldmask_utils.StructToStruct(mask, user1, user2)
+	mask := fieldmask_utils.MaskFromString("stringer")
+	err := fieldmask_utils.StructToStruct(mask, user1, user2, generator.CamelCase, stringEye)
 	assert.Nil(t, err)
 	assert.Equal(t, user1.Stringer.String(), user2.Stringer.String())
 }
@@ -201,8 +201,8 @@ func TestStructToStructNonProtoSuccess(t *testing.T) {
 		},
 	}
 	userDst := &testproto.User{}
-	mask := fieldmask_utils.MaskFromString("", generator.CamelCase)
-	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst)
+	mask := fieldmask_utils.MaskFromString("")
+	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst, generator.CamelCase, stringEye)
 	assert.Nil(t, err)
 	assert.Equal(t, userSrc.Id, userDst.Id)
 	assert.Equal(t, userSrc.Username, userDst.Username)
@@ -227,16 +227,16 @@ func TestStructToStructNonProtoFail(t *testing.T) {
 		Deactivated:  true,
 	}
 	userDst := &testproto.User{}
-	mask := fieldmask_utils.MaskFromString("", generator.CamelCase)
-	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst)
+	mask := fieldmask_utils.MaskFromString("")
+	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst, generator.CamelCase, stringEye)
 	assert.NotNil(t, err)
 }
 
 func TestStructToMapSuccess(t *testing.T) {
 	userDst := make(map[string]interface{})
 	mask := fieldmask_utils.MaskFromString(
-		"id,avatar{original_url},tags,images,permissions,friends{images{resized_url}}", generator.CamelCase)
-	err := fieldmask_utils.StructToMap(mask, testUserFull, userDst)
+		"id,avatar{original_url},tags,images,permissions,friends{images{resized_url}}")
+	err := fieldmask_utils.StructToMap(mask, testUserFull, userDst, generator.CamelCase, stringEye)
 	assert.Nil(t, err)
 	expected := map[string]interface{}{
 		"Id": testUserFull.Id,
@@ -264,8 +264,8 @@ func TestStructToMapSuccess(t *testing.T) {
 func TestStructToMapPartialProtoSuccess(t *testing.T) {
 	userDst := make(map[string]interface{})
 	mask := fieldmask_utils.MaskFromString(
-		"id,avatar{original_url},images,username,permissions,name{male_name}", generator.CamelCase)
-	err := fieldmask_utils.StructToMap(mask, testUserPartial, userDst)
+		"id,avatar{original_url},images,username,permissions,name{male_name}")
+	err := fieldmask_utils.StructToMap(mask, testUserPartial, userDst, generator.CamelCase, stringEye)
 	assert.Nil(t, err)
 	expected := map[string]interface{}{
 		"Id":          testUserPartial.Id,
@@ -276,4 +276,8 @@ func TestStructToMapPartialProtoSuccess(t *testing.T) {
 		"Name":        nil,
 	}
 	assert.Equal(t, expected, userDst)
+}
+
+func stringEye(s string) string {
+	return s
 }
