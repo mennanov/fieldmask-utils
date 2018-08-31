@@ -26,9 +26,9 @@ import "github.com/golang/protobuf/protoc-gen-go/generator"
 
 var request UpdateUserRequest
 userDst := &testproto.User{} // a struct to copy to
-mask, err := fieldmask_utils.ParseFieldMask(request.FieldMask, generator.CamelCase)
+mask, err := fieldmask_utils.MaskFromProtoFieldMask(request.FieldMask)
 // handle err...
-fieldmask_utils.StructToStruct(mask, request.User, userDst)
+fieldmask_utils.StructToStruct(mask, request.User, userDst, generator.CamelCase, func (s string) string {return s})
 // Only the fields mentioned in the field mask will be copied to userDst, other fields are left intact
 ```
 
@@ -39,9 +39,9 @@ import "github.com/golang/protobuf/protoc-gen-go/generator"
 
 var request UpdateUserRequest
 userDst := make(map[string]interface{}) // a map to copy to
-mask, err := fieldmask_utils.ParseFieldMask(request.FieldMask, generator.CamelCase)
+mask, err := fieldmask_utils.MaskFromProtoFieldMask(request.FieldMask)
 // handle err...
-err := fieldmask_utils.StructToMap(mask, request.User, userDst)
+err := fieldmask_utils.StructToMap(mask, request.User, userDst, generator.CamelCase, func (s string) string {return s})
 // handle err..
 // Only the fields mentioned in the field mask will be copied to userDst, other fields are left intact
 ```
