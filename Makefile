@@ -14,4 +14,4 @@ test:
 
 
 test-with-coverage:
-	${GOPATH}/bin/goveralls -service=travis-pro
+	${GOPATH}/bin/goveralls -service=travis-pro -ignore=test.pb.go
