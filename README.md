@@ -12,7 +12,7 @@ Features:
 
 Copy from a protobuf message to a protobuf message:
 
-```
+```proto
 // test.proto
 
 message UpdateUserRequest {
@@ -21,7 +21,7 @@ message UpdateUserRequest {
 }
 ```
 
-```
+```go
 import "github.com/golang/protobuf/protoc-gen-go/generator"
 
 var request UpdateUserRequest
@@ -34,7 +34,7 @@ fieldmask_utils.StructToStruct(mask, request.User, userDst, generator.CamelCase,
 
 Copy from a protobuf message to a `map[string]interface{}`:
 
-```
+```go
 import "github.com/golang/protobuf/protoc-gen-go/generator"
 
 var request UpdateUserRequest

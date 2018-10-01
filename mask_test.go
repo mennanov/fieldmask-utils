@@ -7,6 +7,11 @@ import (
 	"testing"
 )
 
+func TestMask_String(t *testing.T) {
+	mask := fieldmask_utils.MaskFromString("a{b{c}}")
+	assert.Equal(t, "a{b{c}}", mask.String())
+}
+
 func TestMaskFromProtoFieldMaskSuccess(t *testing.T) {
 	testCases := []struct {
 		mask         *field_mask.FieldMask
