@@ -7,6 +7,7 @@ Features:
 
 * Copy from any Go struct to any compatible Go struct with a field mask applied
 * Copy from any Go struct to a `map[string]interface{}` with a field mask applied
+* Extensible masks (e.g. inverse mask: copy all except those mentioned, etc.)
 
 ### Examples
 
@@ -26,9 +27,9 @@ import "github.com/golang/protobuf/protoc-gen-go/generator"
 
 var request UpdateUserRequest
 userDst := &testproto.User{} // a struct to copy to
-mask, err := fieldmask_utils.MaskFromProtoFieldMask(request.FieldMask)
+mask, err := fieldmask_utils.MaskFromProtoFieldMask(request.FieldMask, generator.CamelCase)
 // handle err...
-fieldmask_utils.StructToStruct(mask, request.User, userDst, generator.CamelCase, func (s string) string {return s})
+fieldmask_utils.StructToStruct(mask, request.User, userDst)
 // Only the fields mentioned in the field mask will be copied to userDst, other fields are left intact
 ```
 
@@ -39,11 +40,23 @@ import "github.com/golang/protobuf/protoc-gen-go/generator"
 
 var request UpdateUserRequest
 userDst := make(map[string]interface{}) // a map to copy to
-mask, err := fieldmask_utils.MaskFromProtoFieldMask(request.FieldMask)
+mask, err := fieldmask_utils.MaskFromProtoFieldMask(request.FieldMask, generator.CamelCase)
 // handle err...
-err := fieldmask_utils.StructToMap(mask, request.User, userDst, generator.CamelCase, func (s string) string {return s})
+err := fieldmask_utils.StructToMap(mask, request.User, userDst)
 // handle err..
 // Only the fields mentioned in the field mask will be copied to userDst, other fields are left intact
+```
+
+Copy with an inverse mask:
+
+```go
+import "github.com/golang/protobuf/protoc-gen-go/generator"
+
+var request UpdateUserRequest
+userDst := &testproto.User{} // a struct to copy to
+mask := fieldmask_utils.MaskInverse{"Id": nil, "Friends": fieldmask_utils.MaskInverse{"Username": nil}}
+fieldmask_utils.StructToStruct(mask, request.User, userDst)
+// Only the fields that are not mentioned in the field mask will be copied to userDst, other fields are left intact.
 ```
 
 ### Limitations
