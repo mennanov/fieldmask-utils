@@ -77,8 +77,13 @@ func (m MaskInverse) String() string {
 
 // MaskFromProtoFieldMask creates a Mask from the given FieldMask.
 func MaskFromProtoFieldMask(fm *field_mask.FieldMask, naming func(string) string) (Mask, error) {
+	return MaskFromPaths(fm.Paths, naming)
+}
+
+// MaskFromPaths creates a new Mask from the given paths.
+func MaskFromPaths(paths []string, naming func(string) string) (Mask, error) {
 	root := make(Mask)
-	for _, path := range fm.GetPaths() {
+	for _, path := range paths {
 		mask := root
 		for _, fieldName := range strings.Split(path, ".") {
 			if fieldName == "" {

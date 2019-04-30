@@ -4,6 +4,7 @@ import (
 	"github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/mennanov/fieldmask-utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/protobuf/field_mask"
 	"testing"
 )
@@ -13,7 +14,8 @@ func TestMask_String(t *testing.T) {
 	assert.Equal(t, "a{b{c}}", mask.String())
 }
 
-func TestMaskFromProtoFieldMaskSuccess(t *testing.T) {
+func TestMaskFromPaths_Success(t *testing.T) {
+	eye := func(s string) string { return s }
 	testCases := []struct {
 		mask         *field_mask.FieldMask
 		expectedTree string
@@ -40,9 +42,12 @@ func TestMaskFromProtoFieldMaskSuccess(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		mask, err := fieldmask_utils.MaskFromProtoFieldMask(testCase.mask, func(s string) string { return s })
-		assert.Nil(t, err)
-		assert.Equal(t, fieldmask_utils.MaskFromString(testCase.expectedTree), mask)
+		maskFromProto, err := fieldmask_utils.MaskFromProtoFieldMask(testCase.mask, eye)
+		require.Nil(t, err)
+		maskFromPaths, err := fieldmask_utils.MaskFromPaths(testCase.mask.Paths, eye)
+		require.Nil(t, err)
+		assert.Equal(t, fieldmask_utils.MaskFromString(testCase.expectedTree), maskFromProto)
+		assert.Equal(t, maskFromProto, maskFromPaths)
 	}
 }
 
