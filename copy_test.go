@@ -385,6 +385,89 @@ func TestStructToStruct_SliceOfPtrsToStruct_EmptyDst(t *testing.T) {
 	}, dst)
 }
 
+func TestStructToStruct_ArrayOfStructs_EmptyDst(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 int
+	}
+	type B struct {
+		Field1 string
+		A      [2]A
+	}
+	type C struct {
+		Field1 string
+		A      [3]A
+	}
+	src := &B{
+		Field1: "src StringerB field1",
+		A: [2]A{
+			{
+				Field1: "StringerA field1 0",
+				Field2: 1,
+			},
+			{
+				Field1: "StringerA field1 1",
+				Field2: 2,
+			},
+		},
+	}
+	dst := new(C)
+
+	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, &C{
+		Field1: src.Field1,
+		A: [3]A{
+			{
+				Field1: "",
+				Field2: src.A[0].Field2,
+			},
+			{
+				Field1: "",
+				Field2: src.A[1].Field2,
+			},
+			{
+				Field1: "",
+				Field2: 0,
+			},
+		},
+	}, dst)
+}
+
+func TestStructToStruct_Array_DstLenLessThanSrc(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 int
+	}
+	type B struct {
+		Field1 string
+		A      [2]A
+	}
+	type C struct {
+		Field1 string
+		A      [1]A
+	}
+	src := &B{
+		Field1: "src StringerB field1",
+		A: [2]A{
+			{
+				Field1: "StringerA field1 0",
+				Field2: 1,
+			},
+			{
+				Field1: "StringerA field1 1",
+				Field2: 2,
+			},
+		},
+	}
+	dst := new(C)
+
+	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	assert.Error(t, err)
+}
+
 func TestStructToStruct_DifferentStructTypes(t *testing.T) {
 	type A struct {
 		Field string
@@ -531,7 +614,7 @@ func TestStructToStruct_SameInterfaces_NonEmptyDst(t *testing.T) {
 	}, dst)
 }
 
-func TestStructToStruct_DifferentInterfaces_NonEmptyDst(t *testing.T) {
+func TestStructToStruct_DifferentCompatibleInterfaces_NonEmptyDst(t *testing.T) {
 	type C struct {
 		S fmt.Stringer
 	}
@@ -550,6 +633,43 @@ func TestStructToStruct_DifferentInterfaces_NonEmptyDst(t *testing.T) {
 	err := fieldmask_utils.StructToStruct(mask, src, dst)
 	require.NoError(t, err)
 	assert.Equal(t, src.S.String(), dst.S.String())
+}
+
+type Logger interface {
+	Log() string
+}
+
+type LoggerImpl struct {
+	Field string
+}
+
+func (d *LoggerImpl) Log() string {
+	return d.Field
+}
+
+func TestStructToStruct_DifferentIncompatibleInterfaces(t *testing.T) {
+	type C struct {
+		S fmt.Stringer
+	}
+
+	type E struct {
+		S Logger
+	}
+
+	src := &C{
+		S: &StringerA{
+			Field: "StringerA",
+		},
+	}
+	dst := &E{
+		S: &LoggerImpl{
+			Field: "Logger",
+		},
+	}
+	mask := fieldmask_utils.MaskFromString("S")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, src.S.String(), dst.S.Log())
 }
 
 func TestStructToStruct_EmptyMask(t *testing.T) {
@@ -660,6 +780,28 @@ func TestStructToStruct_SameInterfacesNonPtr_NonEmptyDst(t *testing.T) {
 	}
 
 	mask := fieldmask_utils.MaskFromString("Stringer")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	assert.Error(t, err)
+}
+
+func TestStructToStruct_NonPtrDst(t *testing.T) {
+	type A struct {
+		Field int
+	}
+	src := &A{Field: 1}
+	dst := A{}
+	mask := fieldmask_utils.MaskFromString("")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	assert.Error(t, err)
+}
+
+func TestStructToStruct_DifferentDstKind(t *testing.T) {
+	type A struct {
+		Field int
+	}
+	src := &A{Field: 1}
+	dst := &map[string]interface{}{}
+	mask := fieldmask_utils.MaskFromString("")
 	err := fieldmask_utils.StructToStruct(mask, src, dst)
 	assert.Error(t, err)
 }
@@ -784,6 +926,71 @@ func TestStructToMap_PtrToStruct_NonEmptyDst(t *testing.T) {
 		"A": map[string]interface{}{
 			"Field1": "existing value",
 			"Field2": src.A.Field2,
+		},
+	}, dst)
+}
+
+func TestStructToMap_ArrayOfStructs_EmptyDst(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 string
+	}
+	type B struct {
+		A [1]A
+	}
+	src := &B{
+		A: [1]A{
+			{
+				Field1: "src field1",
+				Field2: "src field2",
+			},
+		},
+	}
+	dst := make(map[string]interface{})
+	mask := fieldmask_utils.MaskFromString("A{Field2}")
+	err := fieldmask_utils.StructToMap(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"A": []map[string]interface{}{
+			{
+				"Field2": src.A[0].Field2,
+			},
+		},
+	}, dst)
+}
+
+func TestStructToMap_SliceOfStructs_NonEmptyDst(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 string
+	}
+	type B struct {
+		A []A
+	}
+	src := &B{
+		A: []A{
+			{
+				Field1: "src field1",
+				Field2: "src field2",
+			},
+		},
+	}
+	dst := map[string]interface{}{
+		"A": []map[string]interface{}{
+			{
+				"Field1": "dst field1",
+			},
+		},
+	}
+	mask := fieldmask_utils.MaskFromString("A{Field2}")
+	err := fieldmask_utils.StructToMap(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"A": []map[string]interface{}{
+			{
+				"Field1": "dst field1",
+				"Field2": src.A[0].Field2,
+			},
 		},
 	}, dst)
 }
