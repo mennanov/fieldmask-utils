@@ -10,7 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mennanov/fieldmask-utils"
+	"github.com/golang/protobuf/ptypes"
+	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 	"github.com/mennanov/fieldmask-utils/testproto"
 )
 
@@ -48,6 +49,7 @@ func init() {
 		Tags: []string{"FRIEND tag1", "FRIEND tag2", "FRIEND tag3"},
 		Name: &testproto.User_FemaleName{FemaleName: "Maggy"},
 	}
+
 	testUserFull = &testproto.User{
 		Id:          1,
 		Username:    "username",
@@ -79,6 +81,8 @@ func init() {
 			},
 		},
 	}
+
+	testUserFull.ExtraUser, _ = ptypes.MarshalAny(proto.Clone(testUserFull))
 	testUserPartial = &testproto.User{
 		Id:       1,
 		Username: "username",
@@ -88,7 +92,7 @@ func init() {
 func TestStructToStruct_Proto(t *testing.T) {
 	userDst := &testproto.User{}
 	mask := fieldmask_utils.MaskFromString(
-		"Id,Avatar{OriginalUrl},Tags,Images,Permissions,Friends{Images{ResizedUrl}},Name{MaleName}")
+		"Id,Avatar{OriginalUrl},Tags,Images,Permissions,Friends{Images{ResizedUrl}},Name{MaleName},ExtraUser{Id,Avatar{OriginalUrl}}")
 	err := fieldmask_utils.StructToStruct(mask, testUserFull, userDst)
 	require.NoError(t, err)
 	assert.Equal(t, testUserFull.Id, userDst.Id)
@@ -106,6 +110,12 @@ func TestStructToStruct_Proto(t *testing.T) {
 	assert.Equal(t, testproto.Role_UNKNOWN, userDst.Role)
 	assert.Equal(t, false, userDst.Deactivated)
 	assert.Equal(t, map[string]string(nil), userDst.Meta)
+
+	extraUser := &testproto.User{}
+	err = ptypes.UnmarshalAny(userDst.ExtraUser, extraUser)
+	require.NoError(t, err)
+	assert.Equal(t, testUserFull.Id, extraUser.Id)
+	assert.Equal(t, testUserFull.Avatar.OriginalUrl, extraUser.Avatar.OriginalUrl)
 }
 
 func TestStructToStruct_PartialProtoSuccess(t *testing.T) {

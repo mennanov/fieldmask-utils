@@ -3,6 +3,9 @@ package fieldmask_utils
 import (
 	"reflect"
 
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/pkg/errors"
 )
 
@@ -61,6 +64,30 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 		if dst.IsNil() {
 			// If dst is nil create a new instance of the underlying type and set dst to the pointer of that instance.
 			dst.Set(reflect.New(dst.Type().Elem()))
+		}
+
+		if x, ok := src.Interface().(*any.Any); ok {
+			sp, err := ptypes.Empty(x)
+			if err != nil {
+				return err
+			}
+			ptypes.UnmarshalAny(x, sp)
+
+			dp := proto.Clone(sp)
+			dp.Reset()
+
+			spv, dpv := reflect.ValueOf(sp), reflect.ValueOf(dp)
+			err = structToStruct(filter, &spv, &dpv)
+			if err != nil {
+				return err
+			}
+
+			x, err = ptypes.MarshalAny(dp)
+			if err != nil {
+				return err
+			}
+
+			dst.Set(reflect.ValueOf(x))
 		}
 
 		srcElem, dstElem := src.Elem(), dst.Elem()
