@@ -10,7 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mennanov/fieldmask-utils"
+	"github.com/golang/protobuf/ptypes"
+
+	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 	"github.com/mennanov/fieldmask-utils/testproto"
 )
 
@@ -48,6 +50,7 @@ func init() {
 		Tags: []string{"FRIEND tag1", "FRIEND tag2", "FRIEND tag3"},
 		Name: &testproto.User_FemaleName{FemaleName: "Maggy"},
 	}
+
 	testUserFull = &testproto.User{
 		Id:          1,
 		Username:    "username",
@@ -79,6 +82,13 @@ func init() {
 			},
 		},
 	}
+
+	extraUser, err := ptypes.MarshalAny(testUserFull)
+	if err != nil {
+		panic(err)
+	}
+
+	testUserFull.ExtraUser = extraUser
 	testUserPartial = &testproto.User{
 		Id:       1,
 		Username: "username",
@@ -88,14 +98,18 @@ func init() {
 func TestStructToStruct_Proto(t *testing.T) {
 	userDst := &testproto.User{}
 	mask := fieldmask_utils.MaskFromString(
-		"Id,Avatar{OriginalUrl},Tags,Images,Permissions,Friends{Images{ResizedUrl}},Name{MaleName}")
+		"Id,Avatar{OriginalUrl},Tags,Images,Permissions,Friends{Images{ResizedUrl}},Name{MaleName},ExtraUser{Id,Avatar{OriginalUrl}}")
 	err := fieldmask_utils.StructToStruct(mask, testUserFull, userDst)
 	require.NoError(t, err)
 	assert.Equal(t, testUserFull.Id, userDst.Id)
 	assert.Equal(t, testUserFull.Avatar.OriginalUrl, userDst.Avatar.OriginalUrl)
 	assert.Equal(t, "", userDst.Avatar.ResizedUrl)
 	assert.Equal(t, testUserFull.Tags, userDst.Tags)
-	assert.Equal(t, testUserFull.Images, userDst.Images)
+	require.Equal(t, len(testUserFull.Images), len(userDst.Images))
+	for i, srcImg := range testUserFull.Images {
+		assert.Equal(t, srcImg.OriginalUrl, userDst.Images[i].OriginalUrl)
+		assert.Equal(t, srcImg.ResizedUrl, userDst.Images[i].ResizedUrl)
+	}
 	assert.Equal(t, testUserFull.Name, userDst.Name)
 	assert.Equal(t, testUserFull.Permissions, userDst.Permissions)
 	assert.Equal(t, len(testUserFull.Friends), len(userDst.Friends))
@@ -106,6 +120,34 @@ func TestStructToStruct_Proto(t *testing.T) {
 	assert.Equal(t, testproto.Role_UNKNOWN, userDst.Role)
 	assert.Equal(t, false, userDst.Deactivated)
 	assert.Equal(t, map[string]string(nil), userDst.Meta)
+
+	extraUser := &testproto.User{}
+	err = ptypes.UnmarshalAny(userDst.ExtraUser, extraUser)
+	require.NoError(t, err)
+	assert.Equal(t, testUserFull.Id, extraUser.Id)
+	assert.Equal(t, testUserFull.Avatar.OriginalUrl, extraUser.Avatar.OriginalUrl)
+}
+
+func TestStructToStruct_ExistingAnyPreserved(t *testing.T) {
+	existingExtraUser := &testproto.User{
+		Id:       42,
+		Username: "username",
+	}
+	existingExtraUserAny, err := ptypes.MarshalAny(existingExtraUser)
+	require.NoError(t, err)
+	userDst := &testproto.User{
+		ExtraUser: existingExtraUserAny,
+	}
+	mask := fieldmask_utils.MaskFromString("ExtraUser{Id,Avatar{OriginalUrl}}")
+	err = fieldmask_utils.StructToStruct(mask, testUserFull, userDst)
+	require.NoError(t, err)
+
+	extraUser := &testproto.User{}
+	err = ptypes.UnmarshalAny(userDst.ExtraUser, extraUser)
+	require.NoError(t, err)
+	assert.Equal(t, testUserFull.Id, extraUser.Id)
+	assert.Equal(t, testUserFull.Avatar.OriginalUrl, extraUser.Avatar.OriginalUrl)
+	assert.Equal(t, "username", extraUser.Username)
 }
 
 func TestStructToStruct_PartialProtoSuccess(t *testing.T) {

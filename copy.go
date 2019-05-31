@@ -3,6 +3,9 @@ package fieldmask_utils
 import (
 	"reflect"
 
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/pkg/errors"
 )
 
@@ -32,6 +35,43 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 
 	switch src.Kind() {
 	case reflect.Struct:
+		if srcAny, ok := src.Interface().(any.Any); ok {
+			dstAny, ok := src.Interface().(any.Any)
+			if !ok {
+				return errors.Errorf("dst type is %s, expected: %s ", dst.Type(), "any.Any")
+			}
+
+			newSrcProto, err := ptypes.Empty(&srcAny)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			if err := ptypes.UnmarshalAny(&srcAny, newSrcProto); err != nil {
+				return errors.WithStack(err)
+			}
+			newSrc := reflect.ValueOf(newSrcProto)
+
+			newDstProto, err := ptypes.Empty(&dstAny)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			if err := ptypes.UnmarshalAny(&dstAny, newDstProto); err != nil {
+				return errors.WithStack(err)
+			}
+			newDst := reflect.ValueOf(newDstProto)
+
+			if err := structToStruct(filter, &newSrc, &newDst); err != nil {
+				return err
+			}
+
+			newDstAny, err := ptypes.MarshalAny(newDst.Interface().(proto.Message))
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
+			dst.Set(reflect.ValueOf(*newDstAny))
+			return nil
+		}
+
 		for i := 0; i < src.NumField(); i++ {
 			fieldName := src.Type().Field(i).Name
 

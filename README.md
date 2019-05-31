@@ -8,6 +8,7 @@ Features:
 * Copy from any Go struct to any compatible Go struct with a field mask applied
 * Copy from any Go struct to a `map[string]interface{}` with a field mask applied
 * Extensible masks (e.g. inverse mask: copy all except those mentioned, etc.)
+* Supports [Protobuf Any](https://developers.google.com/protocol-buffers/docs/proto3#any) message types.
 
 ### Examples
 
@@ -65,7 +66,7 @@ fieldmask_utils.StructToStruct(mask, request.User, userDst)
 
     field mask strings `"a", "a.b", "a.b.c"` will result in a mask `a{b{c}}`, which is the same as `"a.b.c"`.
 
-2.  Masks inside a protobuf `Any` and `Map` are not supported.
+2.  Masks inside a protobuf `Map` are not supported.
 3.  When copying from a struct to struct the destination struct must have the same fields (or a subset)
     as the source struct. Pointers must also be coherent: if a field is a pointer in the source struct, then
     it also must be a pointer (not a value field) in the destination struct.

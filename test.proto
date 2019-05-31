@@ -43,6 +43,7 @@ message User {
     Image avatar = 11;
     repeated string tags = 12;
     repeated User friends = 13;
+    google.protobuf.Any extra_user = 14;
 }
 
 message UpdateUserRequest {

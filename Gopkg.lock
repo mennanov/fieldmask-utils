@@ -2,15 +2,15 @@
 
 
 [[projects]]
-  digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
+  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   pruneopts = "UT"
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
 
 [[projects]]
-  digest = "1:f4966643ab1ec26e17cc3fba0c5aff721c16d43d2e652168dd3a9b21e6113018"
+  digest = "1:e4a12ca1b2a5223cafa89e91ab59f5c9bcc6f026d5a911b69aca0369512ef6ec"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -18,20 +18,22 @@
     "protoc-gen-go/generator",
     "protoc-gen-go/generator/internal/remap",
     "protoc-gen-go/plugin",
+    "ptypes",
     "ptypes/any",
+    "ptypes/duration",
     "ptypes/timestamp",
   ]
   pruneopts = "UT"
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
+  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
+  version = "v1.3.1"
 
 [[projects]]
-  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
+  digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
   name = "github.com/pkg/errors"
   packages = ["."]
   pruneopts = "UT"
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -42,23 +44,23 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:c40d65817cdd41fac9aa7af8bed56927bb2d6d47e4fea566a74880f5c2b1c41e"
+  digest = "1:5da8ce674952566deae4dbc23d07c85caafc6cfa815b0b3e03e41979cedb8750"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
     "require",
   ]
   pruneopts = "UT"
-  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
-  version = "v1.2.2"
+  revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
+  version = "v1.3.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:c060cda753adbcd4ccea60367ec9f72f9f54e786060fafba74feb839bfb3c1fb"
+  digest = "1:036a0ebf741552a7110c5d1502f6747473dc2d20920ad22df646956f45c45c37"
   name = "google.golang.org/genproto"
   packages = ["protobuf/field_mask"]
   pruneopts = "UT"
-  revision = "32ee49c4dd805befd833990acba36cb75042378c"
+  revision = "c2c4e71fbf6989c3e46a18d65cb88c288f8a3a55"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -66,6 +68,7 @@
   input-imports = [
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/protoc-gen-go/generator",
+    "github.com/golang/protobuf/ptypes",
     "github.com/golang/protobuf/ptypes/any",
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/pkg/errors",
