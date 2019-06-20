@@ -806,7 +806,7 @@ func TestStructToStruct_DifferentDstKind(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestStructToStructShallow_UnexportedFieldsPtr(t *testing.T) {
+func TestStructToStruct_UnexportedFieldsPtr(t *testing.T) {
 	type A struct {
 		foo string
 		Bar string
@@ -827,12 +827,12 @@ func TestStructToStructShallow_UnexportedFieldsPtr(t *testing.T) {
 	dst := &B{}
 
 	mask := fieldmask_utils.MaskFromString("A,B")
-	err := fieldmask_utils.StructToStructShallow(mask, src, dst)
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
 	assert.NoError(t, err)
 	assert.Equal(t, src, dst)
 }
 
-func TestStructToStructShallow_UnexportedFields(t *testing.T) {
+func TestStructToStruct_UnexportedFields(t *testing.T) {
 	type A struct {
 		foo string
 		Bar string
@@ -853,7 +853,7 @@ func TestStructToStructShallow_UnexportedFields(t *testing.T) {
 	dst := &B{}
 
 	mask := fieldmask_utils.MaskFromString("A,B")
-	err := fieldmask_utils.StructToStructShallow(mask, src, dst)
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
 	assert.NoError(t, err)
 	assert.Equal(t, src, dst)
 }

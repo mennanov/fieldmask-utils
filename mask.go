@@ -13,6 +13,9 @@ type FieldFilter interface {
 	// Filter should return a corresponding FieldFilter for the given fieldName and a boolean result. If result is true
 	// then the field is copied, skipped otherwise.
 	Filter(fieldName string) (FieldFilter, bool)
+
+	// Returns true if the FieldFilter is empty. In this case all fields are copied.
+	IsEmpty() bool
 }
 
 // Mask is a tree-based implementation of a FieldFilter.
@@ -33,6 +36,10 @@ func (m Mask) Filter(fieldName string) (FieldFilter, bool) {
 		subFilter = Mask{}
 	}
 	return subFilter, ok
+}
+
+func (m Mask) IsEmpty() bool {
+	return len(m) == 0
 }
 
 func mapToString(m map[string]FieldFilter) string {
@@ -71,6 +78,10 @@ func (m MaskInverse) Filter(fieldName string) (FieldFilter, bool) {
 		return MaskInverse{}, !strings.HasPrefix(fieldName, "XXX_")
 	}
 	return subFilter, subFilter != nil
+}
+
+func (m MaskInverse) IsEmpty() bool {
+	return len(m) == 0
 }
 
 func (m MaskInverse) String() string {

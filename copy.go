@@ -12,42 +12,24 @@ import (
 // StructToStruct copies `src` struct to `dst` struct using the given FieldFilter.
 // Only the fields where FieldFilter returns true will be copied to `dst`.
 // `src` and `dst` must be coherent in terms of the field names, but it is not required for them to be of the same type.
-// To copy unexported fields of a struct use StructToStructShallow.
+// Unexported fields are copied only if the corresponding struct filter is empty and `dst` is assignable to `src`.
 func StructToStruct(filter FieldFilter, src, dst interface{}) error {
-	srcVal, dstVal, err := prepareSrcDst(src, dst)
-	if err != nil {
-		return err
-	}
-	return structToStruct(filter, srcVal, dstVal, false)
-}
-
-// StructToStructShallow is similar to StructToStruct, but tries to copy an entire struct at once if the filter returns
-// true for all the fields in a struct. This is useful when all fields (included unexported) need to be copied.
-func StructToStructShallow(filter FieldFilter, src, dst interface{}) error {
-	srcVal, dstVal, err := prepareSrcDst(src, dst)
-	if err != nil {
-		return err
-	}
-	return structToStruct(filter, srcVal, dstVal, true)
-}
-
-func prepareSrcDst(src, dst interface{}) (*reflect.Value, *reflect.Value, error) {
 	dstVal := reflect.ValueOf(dst)
 	if dstVal.Kind() != reflect.Ptr {
-		return nil, nil, errors.Errorf("dst must be a pointer, %s given", dstVal.Kind())
+		return errors.Errorf("dst must be a pointer, %s given", dstVal.Kind())
 	}
 	srcVal := indirect(reflect.ValueOf(src))
 	if srcVal.Kind() != reflect.Struct {
-		return nil, nil, errors.Errorf("src kind must be a struct, %s given", srcVal.Kind())
+		return errors.Errorf("src kind must be a struct, %s given", srcVal.Kind())
 	}
 	dstVal = indirect(dstVal)
 	if dstVal.Kind() != reflect.Struct {
-		return nil, nil, errors.Errorf("dst kind must be a struct, %s given", dstVal.Kind())
+		return errors.Errorf("dst kind must be a struct, %s given", dstVal.Kind())
 	}
-	return &srcVal, &dstVal, nil
+	return structToStruct(filter, &srcVal, &dstVal)
 }
 
-func structToStruct(filter FieldFilter, src, dst *reflect.Value, shallow bool) error {
+func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 	if src.Kind() != dst.Kind() {
 		return errors.Errorf("src kind %s differs from dst kind %s", src.Kind(), dst.Kind())
 	}
@@ -78,7 +60,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, shallow bool) e
 			}
 			newDst := reflect.ValueOf(newDstProto)
 
-			if err := structToStruct(filter, &newSrc, &newDst, shallow); err != nil {
+			if err := structToStruct(filter, &newSrc, &newDst); err != nil {
 				return err
 			}
 
@@ -91,25 +73,9 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, shallow bool) e
 			return nil
 		}
 
-		if shallow {
-			if !dst.CanSet() {
-				return errors.Errorf("dst %s, %s is not settable", dst, dst.Type())
-			}
-			// Check if the filter returns true for all the fields.
-			all := true
-			for i := 0; i < src.NumField(); i++ {
-				fieldName := src.Type().Field(i).Name
-
-				_, ok := filter.Filter(fieldName)
-				if !ok {
-					all = false
-					break
-				}
-			}
-			if all {
-				dst.Set(*src)
-				return nil
-			}
+		if dst.CanSet() && dst.Type().AssignableTo(src.Type()) && filter.IsEmpty() {
+			dst.Set(*src)
+			return nil
 		}
 
 		for i := 0; i < src.NumField(); i++ {
@@ -127,7 +93,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, shallow bool) e
 			}
 
 			srcField := src.FieldByName(fieldName)
-			if err := structToStruct(subFilter, &srcField, &dstField, shallow); err != nil {
+			if err := structToStruct(subFilter, &srcField, &dstField); err != nil {
 				return err
 			}
 		}
@@ -144,7 +110,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, shallow bool) e
 		}
 
 		srcElem, dstElem := src.Elem(), dst.Elem()
-		if err := structToStruct(filter, &srcElem, &dstElem, shallow); err != nil {
+		if err := structToStruct(filter, &srcElem, &dstElem); err != nil {
 			return err
 		}
 
@@ -163,7 +129,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, shallow bool) e
 		}
 
 		srcElem, dstElem := src.Elem(), dst.Elem()
-		if err := structToStruct(filter, &srcElem, &dstElem, shallow); err != nil {
+		if err := structToStruct(filter, &srcElem, &dstElem); err != nil {
 			return err
 		}
 
@@ -180,7 +146,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, shallow bool) e
 				dstItem = reflect.New(dst.Type().Elem()).Elem()
 			}
 
-			if err := structToStruct(filter, &srcItem, &dstItem, shallow); err != nil {
+			if err := structToStruct(filter, &srcItem, &dstItem); err != nil {
 				return err
 			}
 
@@ -198,7 +164,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, shallow bool) e
 		for i := 0; i < src.Len(); i++ {
 			srcItem := src.Index(i)
 			dstItem := dst.Index(i)
-			if err := structToStruct(filter, &srcItem, &dstItem, shallow); err != nil {
+			if err := structToStruct(filter, &srcItem, &dstItem); err != nil {
 				return errors.WithStack(err)
 			}
 		}
