@@ -2,14 +2,16 @@ package fieldmask_utils
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/pkg/errors"
 	"google.golang.org/genproto/protobuf/field_mask"
-	"strings"
 )
 
 // FieldFilter is an interface used by the copying function to filter fields that are needed to be copied.
 type FieldFilter interface {
-	// Filter should return a corresponding FieldFilter for the given fieldName and
+	// Filter should return a corresponding FieldFilter for the given fieldName and a boolean result. If result is true
+	// then the field is copied, skipped otherwise.
 	Filter(fieldName string) (FieldFilter, bool)
 }
 

@@ -806,6 +806,58 @@ func TestStructToStruct_DifferentDstKind(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestStructToStructShallow_UnexportedFieldsPtr(t *testing.T) {
+	type A struct {
+		foo string
+		Bar string
+	}
+
+	type B struct {
+		A *A
+		B string
+	}
+
+	src := &B{
+		A: &A{
+			foo: "foo",
+			Bar: "Bar",
+		},
+		B: "B",
+	}
+	dst := &B{}
+
+	mask := fieldmask_utils.MaskFromString("A,B")
+	err := fieldmask_utils.StructToStructShallow(mask, src, dst)
+	assert.NoError(t, err)
+	assert.Equal(t, src, dst)
+}
+
+func TestStructToStructShallow_UnexportedFields(t *testing.T) {
+	type A struct {
+		foo string
+		Bar string
+	}
+
+	type B struct {
+		A A
+		B string
+	}
+
+	src := &B{
+		A: A{
+			foo: "foo",
+			Bar: "Bar",
+		},
+		B: "B",
+	}
+	dst := &B{}
+
+	mask := fieldmask_utils.MaskFromString("A,B")
+	err := fieldmask_utils.StructToStructShallow(mask, src, dst)
+	assert.NoError(t, err)
+	assert.Equal(t, src, dst)
+}
+
 func TestStructToMap_NestedStruct_EmptyDst(t *testing.T) {
 	type A struct {
 		Field1 string
