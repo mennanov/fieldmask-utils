@@ -11,7 +11,3 @@ proto:
 test:
 	@go get github.com/rakyll/gotest
 	gotest -p 1 -v ./...
-
-
-test-with-coverage:
-	${GOPATH}/bin/goveralls -service=travis-pro -ignore=testproto/*
