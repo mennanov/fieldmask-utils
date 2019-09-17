@@ -77,6 +77,12 @@ func (m MaskInverse) Filter(fieldName string) (FieldFilter, bool) {
 	if !ok {
 		return MaskInverse{}, !strings.HasPrefix(fieldName, "XXX_")
 	}
+
+	// convert Mask to MaskInverse
+	if sm, ok := subFilter.(Mask); ok {
+		return MaskInverse(sm), !sm.IsEmpty()
+	}
+
 	return subFilter, subFilter != nil
 }
 

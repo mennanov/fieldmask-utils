@@ -191,6 +191,37 @@ func TestStructToStruct_MaskInverse(t *testing.T) {
 	assert.Equal(t, userSrc, userDst)
 }
 
+func TestStructToStruct_MaskInverseFromMask(t *testing.T) {
+	userSrc := &testproto.User{
+		Id:          1,
+		Username:    "username",
+		Role:        testproto.Role_ADMIN,
+		Meta:        map[string]string{"foo": "bar"},
+		Deactivated: false,
+		Permissions: []testproto.Permission{testproto.Permission_EXECUTE},
+		Name:        &testproto.User_FemaleName{FemaleName: "Dana"},
+		Friends: []*testproto.User{
+			{Id: 2, Username: "friend1"},
+			{Id: 3, Username: "friend2"},
+		},
+	}
+	userDst := &testproto.User{}
+	// Mask to MaskInverse
+	mask := fieldmask_utils.MaskInverse(fieldmask_utils.Mask{"Id": fieldmask_utils.Mask{}, "Friends": fieldmask_utils.Mask{"Username": fieldmask_utils.Mask{}}})
+	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst)
+	require.NoError(t, err)
+	// Verify that Id is not copied.
+	assert.Equal(t, uint32(0), userDst.Id)
+	// Verify that Friend Usernames are not copied.
+	assert.Equal(t, "", userDst.Friends[0].Username)
+	assert.Equal(t, "", userDst.Friends[1].Username)
+	// Copy missed fields manually and then compare these structs.
+	userDst.Id = userSrc.Id
+	userDst.Friends[0].Username = userSrc.Friends[0].Username
+	userDst.Friends[1].Username = userSrc.Friends[1].Username
+	assert.Equal(t, userSrc, userDst)
+}
+
 func TestStructToStruct_NonProtoSuccess(t *testing.T) {
 	type Image struct {
 		OriginalUrl string
