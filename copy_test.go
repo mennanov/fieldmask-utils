@@ -858,6 +858,68 @@ func TestStructToStruct_UnexportedFields(t *testing.T) {
 	assert.Equal(t, src, dst)
 }
 
+func TestStructToStruct_MaskWithInverseMask(t *testing.T) {
+	type A struct {
+		Foo string
+		Bar string
+	}
+
+	type B struct {
+		A A
+		B string
+		C string
+	}
+	src := &B{
+		A: A{
+			Foo: "foo",
+			Bar: "Bar",
+		},
+		B: "B",
+		C: "C",
+	}
+	dst := &B{}
+	mask := fieldmask_utils.Mask{"B": nil, "A": &fieldmask_utils.MaskInverse{"Bar": nil}}
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	assert.NoError(t, err)
+	assert.Equal(t, &B{
+		A: A{
+			Foo: src.A.Foo,
+		},
+		B: "B",
+	}, dst)
+}
+
+func TestStructToStruct_InverseMaskWithMask(t *testing.T) {
+	type A struct {
+		Foo string
+		Bar string
+	}
+
+	type B struct {
+		A A
+		B string
+		C string
+	}
+	src := &B{
+		A: A{
+			Foo: "foo",
+			Bar: "Bar",
+		},
+		B: "B",
+		C: "C",
+	}
+	dst := &B{}
+	mask := fieldmask_utils.MaskInverse{"B": nil, "A": &fieldmask_utils.Mask{"Bar": nil}}
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	assert.NoError(t, err)
+	assert.Equal(t, &B{
+		A: A{
+			Bar: src.A.Bar,
+		},
+		C: "C",
+	}, dst)
+}
+
 func TestStructToMap_NestedStruct_EmptyDst(t *testing.T) {
 	type A struct {
 		Field1 string
