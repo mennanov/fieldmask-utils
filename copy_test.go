@@ -877,16 +877,21 @@ func TestStructToStruct_MaskWithInverseMask(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	dst := &B{}
-	mask := fieldmask_utils.Mask{"B": nil, "A": &fieldmask_utils.MaskInverse{"Bar": nil}}
-	err := fieldmask_utils.StructToStruct(mask, src, dst)
-	assert.NoError(t, err)
-	assert.Equal(t, &B{
-		A: A{
-			Foo: src.A.Foo,
-		},
-		B: "B",
-	}, dst)
+	for _, mask := range []fieldmask_utils.FieldFilter{
+		fieldmask_utils.Mask{"B": nil, "A": &fieldmask_utils.MaskInverse{"Bar": nil}},
+		fieldmask_utils.Mask{"B": fieldmask_utils.Mask{}, "A": &fieldmask_utils.MaskInverse{"Bar": fieldmask_utils.Mask{}}},
+	}{
+		dst := &B{}
+		err := fieldmask_utils.StructToStruct(mask, src, dst)
+		assert.NoError(t, err)
+		assert.Equal(t, &B{
+			A: A{
+				Foo: src.A.Foo,
+			},
+			B: "B",
+		}, dst)
+	}
+
 }
 
 func TestStructToStruct_InverseMaskWithMask(t *testing.T) {
@@ -908,16 +913,21 @@ func TestStructToStruct_InverseMaskWithMask(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	dst := &B{}
-	mask := fieldmask_utils.MaskInverse{"B": nil, "A": &fieldmask_utils.Mask{"Bar": nil}}
-	err := fieldmask_utils.StructToStruct(mask, src, dst)
-	assert.NoError(t, err)
-	assert.Equal(t, &B{
-		A: A{
-			Bar: src.A.Bar,
-		},
-		C: "C",
-	}, dst)
+	for _, mask := range []fieldmask_utils.FieldFilter{
+		fieldmask_utils.MaskInverse{"B": fieldmask_utils.Mask{}, "A": &fieldmask_utils.Mask{"Bar": fieldmask_utils.Mask{}}},
+		fieldmask_utils.MaskInverse{"B": nil, "A": &fieldmask_utils.Mask{"Bar": nil}},
+	} {
+		dst := &B{}
+		err := fieldmask_utils.StructToStruct(mask, src, dst)
+		assert.NoError(t, err)
+		assert.Equal(t, &B{
+			A: A{
+				Bar: src.A.Bar,
+			},
+			C: "C",
+		}, dst)
+	}
+
 }
 
 func TestStructToMap_NestedStruct_EmptyDst(t *testing.T) {
