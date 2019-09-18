@@ -226,6 +226,39 @@ func TestStructToStruct_NonProtoSuccess(t *testing.T) {
 	assert.Equal(t, src.Deactivated, dst.Deactivated)
 }
 
+func TestStructToStruct_MaskInverseFromMask(t *testing.T) {
+	userSrc := &testproto.User{
+		Id:          1,
+		Username:    "username",
+		Role:        testproto.Role_ADMIN,
+		Meta:        map[string]string{"foo": "bar"},
+		Deactivated: false,
+		Permissions: []testproto.Permission{testproto.Permission_EXECUTE},
+		Name:        &testproto.User_FemaleName{FemaleName: "Dana"},
+		Friends: []*testproto.User{
+			{Id: 2, Username: "friend1"},
+			{Id: 3, Username: "friend2"},
+		},
+	}
+	userDst := &testproto.User{}
+	// Mask to MaskInverse
+	mask := fieldmask_utils.MaskInverse{"Id": fieldmask_utils.Mask{}, "Friends": fieldmask_utils.Mask{"Username": fieldmask_utils.Mask{}}}
+	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst)
+	require.NoError(t, err)
+	assert.Equal(t, &testproto.User{
+		Username:    userSrc.Username,
+		Role:        userSrc.Role,
+		Meta:        userSrc.Meta,
+		Deactivated: userSrc.Deactivated,
+		Permissions: userSrc.Permissions,
+		Name:        userSrc.Name,
+		Friends: []*testproto.User{
+			{Username: "friend1"},
+			{Username: "friend2"},
+		},
+	}, userDst)
+}
+
 func TestStructToStruct_NonProtoFail(t *testing.T) {
 	type User struct {
 		Id           uint32
