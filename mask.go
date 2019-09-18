@@ -38,7 +38,6 @@ func (m Mask) Filter(fieldName string) (FieldFilter, bool) {
 	return subFilter, ok
 }
 
-// IsEmpty returns true of the mask is empty.
 func (m Mask) IsEmpty() bool {
 	return len(m) == 0
 }
@@ -69,7 +68,7 @@ func (m Mask) String() string {
 }
 
 // MaskInverse is an inversed version of a Mask (will copy all the fields except those mentioned in the mask).
-type MaskInverse map[string]FieldFilter
+type MaskInverse Mask
 
 // Filter returns true for those fieldNames that do NOT exist in the underlying map.
 // Field names that start with "XXX_" are ignored as unexported.
@@ -78,13 +77,9 @@ func (m MaskInverse) Filter(fieldName string) (FieldFilter, bool) {
 	if !ok {
 		return MaskInverse{}, !strings.HasPrefix(fieldName, "XXX_")
 	}
-	if subFilter == nil {
-		return nil, false
-	}
-	return subFilter, !subFilter.IsEmpty()
+	return subFilter, subFilter != nil
 }
 
-// IsEmpty returns true if the mask is empty.
 func (m MaskInverse) IsEmpty() bool {
 	return len(m) == 0
 }
