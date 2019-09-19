@@ -49,12 +49,12 @@ func TestFieldFilterFromPaths_Success(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		//maskFromProto, err := fieldmask_utils.MaskFromProtoFieldMask(testCase.mask, eye)
-		//require.NoError(t, err)
-		//maskFromPaths, err := fieldmask_utils.MaskFromPaths(testCase.mask.Paths, eye)
-		//require.NoError(t, err)
-		//assert.Equal(t, fieldmask_utils.MaskFromString(testCase.expectedTree), maskFromProto)
-		//assert.Equal(t, maskFromProto, maskFromPaths)
+		maskFromProto, err := fieldmask_utils.MaskFromProtoFieldMask(testCase.mask, eye)
+		require.NoError(t, err)
+		maskFromPaths, err := fieldmask_utils.MaskFromPaths(testCase.mask.Paths, eye)
+		require.NoError(t, err)
+		assert.Equal(t, fieldmask_utils.MaskFromString(testCase.expectedTree), maskFromProto)
+		assert.Equal(t, maskFromProto, maskFromPaths)
 		// MaskInverse
 		maskInverseFromProto, err := fieldmask_utils.MaskInverseFromProtoFieldMask(testCase.mask, eye)
 		require.NoError(t, err)
