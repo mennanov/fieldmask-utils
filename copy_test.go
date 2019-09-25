@@ -343,6 +343,55 @@ func TestStructToStruct_SliceOfStructs_NonEmptyDst(t *testing.T) {
 	}, dst)
 }
 
+func TestStructToStruct_EntireStructsSlice_NonEmptyDst(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 int
+	}
+	type B struct {
+		Field1 string
+		A      []A
+	}
+	src := &B{
+		Field1: "src StringerB field1",
+		A: []A{
+			{
+				Field1: "StringerA field1 0",
+				Field2: 1,
+			},
+			{
+				Field1: "StringerA field1 1",
+				Field2: 2,
+			},
+		},
+	}
+	dst := &B{
+		Field1: "dst StringerB field1",
+		A: []A{
+			{
+				Field1: "dst StringerA field1 0",
+				Field2: 10,
+			},
+			{
+				Field1: "dst StringerA field1 1",
+				Field2: 20,
+			},
+			{
+				Field1: "dst StringerA field1 2",
+				Field2: 30,
+			},
+		},
+	}
+
+	mask := fieldmask_utils.MaskFromString("Field1,A")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, &B{
+		Field1: src.Field1,
+		A:      src.A,
+	}, dst)
+}
+
 func TestStructToStruct_SliceOfPtrsToStruct_EmptyDst(t *testing.T) {
 	type A struct {
 		Field1 string

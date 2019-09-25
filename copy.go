@@ -135,7 +135,8 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 
 	case reflect.Slice:
 		dstLen := dst.Len()
-		for i := 0; i < src.Len(); i++ {
+		srcLen := src.Len()
+		for i := 0; i < srcLen; i++ {
 			srcItem := src.Index(i)
 			var dstItem reflect.Value
 			if i < dstLen {
@@ -154,6 +155,9 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 				// Append newly created items to the slice.
 				dst.Set(reflect.Append(*dst, dstItem))
 			}
+		}
+		if dstLen > srcLen {
+			dst.SetLen(srcLen)
 		}
 
 	case reflect.Array:
