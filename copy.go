@@ -229,17 +229,17 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 				continue
 			}
 
+			srcLen := srcField.Len()
 			var newValue []map[string]interface{}
 			existingValue, ok := dst[fieldName]
 			if ok {
 				newValue = existingValue.([]map[string]interface{})
 			} else {
-				newValue = make([]map[string]interface{}, srcField.Len())
+				newValue = make([]map[string]interface{}, srcLen)
 			}
 
 			// Iterate over items of the slice/array.
 			dstLen := len(newValue)
-			srcLen := srcField.Len()
 			if dstLen < srcLen {
 				return errors.Errorf("dst slice len %d is less than src slice len %d", dstLen, srcLen)
 			}
@@ -258,6 +258,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 					newValue = append(newValue, newDst)
 				}
 			}
+			newValue = newValue[:srcLen]
 			dst[fieldName] = newValue
 
 		case reflect.Struct:
