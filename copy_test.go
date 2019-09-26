@@ -343,6 +343,55 @@ func TestStructToStruct_SliceOfStructs_NonEmptyDst(t *testing.T) {
 	}, dst)
 }
 
+func TestStructToStruct_EntireSlice_NonEmptyDst(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 int
+	}
+	type B struct {
+		Field1 string
+		A      []A
+	}
+	src := &B{
+		Field1: "src StringerB field1",
+		A: []A{
+			{
+				Field1: "StringerA field1 0",
+				Field2: 1,
+			},
+			{
+				Field1: "StringerA field1 1",
+				Field2: 2,
+			},
+		},
+	}
+	dst := &B{
+		Field1: "dst StringerB field1",
+		A: []A{
+			{
+				Field1: "dst StringerA field1 0",
+				Field2: 10,
+			},
+			{
+				Field1: "dst StringerA field1 1",
+				Field2: 20,
+			},
+			{
+				Field1: "dst StringerA field1 2",
+				Field2: 30,
+			},
+		},
+	}
+
+	mask := fieldmask_utils.MaskFromString("Field1,A")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, &B{
+		Field1: src.Field1,
+		A:      src.A,
+	}, dst)
+}
+
 func TestStructToStruct_SliceOfPtrsToStruct_EmptyDst(t *testing.T) {
 	type A struct {
 		Field1 string
@@ -1117,4 +1166,105 @@ func TestStructToMap_SliceOfStructs_NonEmptyDst(t *testing.T) {
 			},
 		},
 	}, dst)
+}
+
+func TestStructToMap_EntireSlicePrimitive_NonEmptyDst(t *testing.T) {
+	type A struct {
+		Field1 []int
+	}
+	src := &A{
+		Field1: []int{1, 2, 4, 8},
+	}
+
+	dst := map[string]interface{}{
+		"Field1": []int{16, 32, 64},
+	}
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToMap(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": src.Field1,
+	}, dst)
+}
+
+func TestStructToMap_EntireSlice_NonEmptyDst(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 string
+	}
+	type B struct {
+		A []A
+	}
+	src := &B{
+		A: []A{
+			{
+				Field1: "src ele1 field1",
+				Field2: "src ele1 field2",
+			},
+			{
+				Field1: "src ele2 field1",
+				Field2: "src ele2 field2",
+			},
+		},
+	}
+	dst := map[string]interface{}{
+		"A": []map[string]interface{}{
+			{
+				"Field1": "dst ele1 field1",
+			},
+			{
+				"Field2": "dst ele2 field 2",
+			},
+			{
+				"Field1": "dst ele3 field 3",
+			},
+		},
+	}
+	mask := fieldmask_utils.MaskFromString("A")
+	err := fieldmask_utils.StructToMap(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"A": []map[string]interface{}{
+			{
+				"Field1": src.A[0].Field1,
+				"Field2": src.A[0].Field2,
+			},
+			{
+				"Field1": src.A[1].Field1,
+				"Field2": src.A[1].Field2,
+			},
+		},
+	}, dst)
+}
+
+func TestStructToMap_EntireSlice_FailsWhenDestSliceLenIsLessThanSource(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 string
+	}
+	type B struct {
+		A []A
+	}
+	src := &B{
+		A: []A{
+			{
+				Field1: "src ele1 field1",
+				Field2: "src ele1 field2",
+			},
+			{
+				Field1: "src ele2 field1",
+				Field2: "src ele2 field2",
+			},
+		},
+	}
+	dst := map[string]interface{}{
+		"A": []map[string]interface{}{
+			{
+				"Field1": "dst ele1 field1",
+			},
+		},
+	}
+	mask := fieldmask_utils.MaskFromString("A")
+	err := fieldmask_utils.StructToMap(mask, src, dst)
+	require.Error(t, err)
 }

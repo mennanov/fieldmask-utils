@@ -135,7 +135,8 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 
 	case reflect.Slice:
 		dstLen := dst.Len()
-		for i := 0; i < src.Len(); i++ {
+		srcLen := src.Len()
+		for i := 0; i < srcLen; i++ {
 			srcItem := src.Index(i)
 			var dstItem reflect.Value
 			if i < dstLen {
@@ -154,6 +155,9 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 				// Append newly created items to the slice.
 				dst.Set(reflect.Append(*dst, dstItem))
 			}
+		}
+		if dstLen > srcLen {
+			dst.SetLen(srcLen)
 		}
 
 	case reflect.Array:
@@ -225,17 +229,17 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 				continue
 			}
 
+			srcLen := srcField.Len()
 			var newValue []map[string]interface{}
 			existingValue, ok := dst[fieldName]
 			if ok {
 				newValue = existingValue.([]map[string]interface{})
 			} else {
-				newValue = make([]map[string]interface{}, srcField.Len())
+				newValue = make([]map[string]interface{}, srcLen)
 			}
 
 			// Iterate over items of the slice/array.
 			dstLen := len(newValue)
-			srcLen := srcField.Len()
 			if dstLen < srcLen {
 				return errors.Errorf("dst slice len %d is less than src slice len %d", dstLen, srcLen)
 			}
@@ -254,6 +258,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 					newValue = append(newValue, newDst)
 				}
 			}
+			newValue = newValue[:srcLen]
 			dst[fieldName] = newValue
 
 		case reflect.Struct:
