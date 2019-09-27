@@ -185,6 +185,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 
 // StructToMap copies `src` struct to the `dst` map.
 // Behavior is similar to `StructToStruct`.
+// Arrays in the non-empty dst are converted to slices.
 func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}) error {
 	srcVal := indirect(reflect.ValueOf(src))
 	srcType := srcVal.Type()
@@ -221,43 +222,48 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			itemKind := srcField.Type().Elem().Kind()
 			if itemKind != reflect.Ptr && itemKind != reflect.Struct && itemKind != reflect.Interface {
 				// Handle this array/slice as a regular non-nested data structure: copy it entirely to dst.
-				if srcField.Len() > 0 {
-					dst[fieldName] = srcField.Interface()
-				} else {
-					dst[fieldName] = []interface{}(nil)
-				}
+				dst[fieldName] = srcField.Interface()
 				continue
 			}
-
 			srcLen := srcField.Len()
 			var newValue []map[string]interface{}
 			existingValue, ok := dst[fieldName]
 			if ok {
-				newValue = existingValue.([]map[string]interface{})
-			} else {
-				newValue = make([]map[string]interface{}, srcLen)
+				v := reflect.ValueOf(existingValue)
+				if v.Kind() == reflect.Array {
+					// Convert the array to a slice.
+					for i := 0; i < v.Len(); i++ {
+						itemInterface := v.Index(i).Interface()
+						item, k := itemInterface.(map[string]interface{})
+						if !k {
+							return errors.Errorf("unexpected dst type %T, expected map[string]interface{}", itemInterface)
+						}
+						newValue = append(newValue, item)
+					}
+				} else {
+					newValue, ok = existingValue.([]map[string]interface{})
+					if !ok {
+						return errors.Errorf("unexpected dst type %T, expected []map[string]interface{}", newValue)
+					}
+				}
 			}
 
 			// Iterate over items of the slice/array.
 			dstLen := len(newValue)
 			if dstLen < srcLen {
-				return errors.Errorf("dst slice len %d is less than src slice len %d", dstLen, srcLen)
+				// Grow the dst slice to match the src len.
+				for i := 0; i < srcLen-dstLen; i++ {
+					newValue = append(newValue, make(map[string]interface{}))
+				}
+				dstLen = srcLen
 			}
 			for i := 0; i < srcLen; i++ {
 				subValue := srcField.Index(i)
-				if newValue[i] == nil {
-					newValue[i] = make(map[string]interface{})
-				}
-				newDst := newValue[i]
-				if err := StructToMap(subFilter, subValue.Interface(), newDst); err != nil {
+				if err := StructToMap(subFilter, subValue.Interface(), newValue[i]); err != nil {
 					return err
 				}
-				if i < dstLen {
-					newValue[i] = newDst
-				} else {
-					newValue = append(newValue, newDst)
-				}
 			}
+			// Truncate the dst to the length of src.
 			newValue = newValue[:srcLen]
 			dst[fieldName] = newValue
 

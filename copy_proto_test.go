@@ -315,9 +315,9 @@ func TestStructToMap_PartialProtoSuccess(t *testing.T) {
 	expected := map[string]interface{}{
 		"Id":          testUserPartial.Id,
 		"Avatar":      nil,
-		"Images":      []map[string]interface{}{},
+		"Images":      []map[string]interface{}(nil),
 		"Username":    testUserPartial.Username,
-		"Permissions": []interface{}(nil),
+		"Permissions": []testproto.Permission(nil),
 		"Name":        nil,
 	}
 	assert.Equal(t, expected, userDst)
