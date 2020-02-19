@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mennanov/fieldmask-utils"
+	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 )
 
 func TestStructToStruct_SimpleStruct(t *testing.T) {
@@ -1003,6 +1003,35 @@ func TestStructToMap_NestedStruct_EmptyDst(t *testing.T) {
 		"Field1": src.Field1,
 		"A": map[string]interface{}{
 			"Field2": src.A.Field2,
+		},
+	}, dst)
+}
+
+func TestStructToMap_NestedStruct_EmptyDst_OptionDst(t *testing.T) {
+	opts := fieldmask_utils.WithTag("db")
+	type A struct {
+		Field1 string
+		Field2 int `db:"some_field"`
+	}
+	type B struct {
+		Field1 string `struct:"a_name"`
+		A      A      `db:"another_name"`
+	}
+	src := &B{
+		Field1: "B Field1",
+		A: A{
+			Field1: "A Field 1",
+			Field2: 1,
+		},
+	}
+	dst := make(map[string]interface{})
+	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
+	err := fieldmask_utils.StructToMap(mask, src, dst, opts)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": src.Field1,
+		"another_name": map[string]interface{}{
+			"some_field": src.A.Field2,
 		},
 	}, dst)
 }

@@ -245,7 +245,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			} else {
 				newValue = make(map[string]interface{})
 			}
-			if err := StructToMap(subFilter, srcField.Interface(), newValue); err != nil {
+			if err := StructToMap(subFilter, srcField.Interface(), newValue, userOpts...); err != nil {
 				return err
 			}
 			dst[dstName] = newValue
@@ -292,7 +292,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			}
 			for i := 0; i < srcLen; i++ {
 				subValue := srcField.Index(i)
-				if err := StructToMap(subFilter, subValue.Interface(), newValue[i]); err != nil {
+				if err := StructToMap(subFilter, subValue.Interface(), newValue[i], userOpts...); err != nil {
 					return err
 				}
 			}
@@ -308,7 +308,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			} else {
 				newValue = make(map[string]interface{})
 			}
-			if err := StructToMap(subFilter, srcField.Interface(), newValue); err != nil {
+			if err := StructToMap(subFilter, srcField.Interface(), newValue, userOpts...); err != nil {
 				return err
 			}
 			dst[dstName] = newValue
