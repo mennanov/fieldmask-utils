@@ -2,6 +2,7 @@ package fieldmask_utils
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -183,10 +184,41 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 	return nil
 }
 
+type Options struct {
+	DstTag string
+}
+
+type Option func(*Options)
+
+func WithTag(s string) Option {
+	return func(o *Options) {
+		o.DstTag = s
+	}
+}
+
+func NewDefaultOptions() *Options {
+	return &Options{}
+}
+
+func dstKey(tag string, f reflect.StructField) string {
+	if tag == "" {
+		return f.Name
+	}
+	lookupResult, ok := f.Tag.Lookup(tag)
+	if !ok {
+		return f.Name
+	}
+	return strings.Split(lookupResult, ",")[0]
+}
+
 // StructToMap copies `src` struct to the `dst` map.
 // Behavior is similar to `StructToStruct`.
 // Arrays in the non-empty dst are converted to slices.
-func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}) error {
+func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}, userOpts ...Option) error {
+	opts := NewDefaultOptions()
+	for _, o := range userOpts {
+		o(opts)
+	}
 	srcVal := indirect(reflect.ValueOf(src))
 	srcType := srcVal.Type()
 	for i := 0; i < srcVal.NumField(); i++ {
@@ -197,16 +229,17 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			continue
 		}
 		srcField := srcVal.FieldByName(fieldName)
+		dstName := dstKey(opts.DstTag, srcType.Field(i))
 
 		switch srcField.Kind() {
 		case reflect.Ptr, reflect.Interface:
 			if srcField.IsNil() {
-				dst[fieldName] = nil
+				dst[dstName] = nil
 				continue
 			}
 
 			var newValue map[string]interface{}
-			existingValue, ok := dst[fieldName]
+			existingValue, ok := dst[dstName]
 			if ok {
 				newValue = existingValue.(map[string]interface{})
 			} else {
@@ -215,19 +248,19 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			if err := StructToMap(subFilter, srcField.Interface(), newValue); err != nil {
 				return err
 			}
-			dst[fieldName] = newValue
+			dst[dstName] = newValue
 
 		case reflect.Array, reflect.Slice:
 			// Check if it is a slice of primitive values.
 			itemKind := srcField.Type().Elem().Kind()
 			if itemKind != reflect.Ptr && itemKind != reflect.Struct && itemKind != reflect.Interface {
 				// Handle this array/slice as a regular non-nested data structure: copy it entirely to dst.
-				dst[fieldName] = srcField.Interface()
+				dst[dstName] = srcField.Interface()
 				continue
 			}
 			srcLen := srcField.Len()
 			var newValue []map[string]interface{}
-			existingValue, ok := dst[fieldName]
+			existingValue, ok := dst[dstName]
 			if ok {
 				v := reflect.ValueOf(existingValue)
 				if v.Kind() == reflect.Array {
@@ -265,11 +298,11 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			}
 			// Truncate the dst to the length of src.
 			newValue = newValue[:srcLen]
-			dst[fieldName] = newValue
+			dst[dstName] = newValue
 
 		case reflect.Struct:
 			var newValue map[string]interface{}
-			existingValue, ok := dst[fieldName]
+			existingValue, ok := dst[dstName]
 			if ok {
 				newValue = existingValue.(map[string]interface{})
 			} else {
@@ -278,11 +311,11 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			if err := StructToMap(subFilter, srcField.Interface(), newValue); err != nil {
 				return err
 			}
-			dst[fieldName] = newValue
+			dst[dstName] = newValue
 
 		default:
 			// Set a value on a map.
-			dst[fieldName] = srcField.Interface()
+			dst[dstName] = srcField.Interface()
 		}
 	}
 	return nil
