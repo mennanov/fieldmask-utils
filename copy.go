@@ -208,7 +208,11 @@ func dstKey(tag string, f reflect.StructField) string {
 	if !ok {
 		return f.Name
 	}
-	return strings.Split(lookupResult, ",")[0]
+	firstComma := strings.Index(lookupResult, ",")
+	if firstComma == -1 {
+		return lookupResult
+	}
+	return lookupResult[:firstComma]
 }
 
 // StructToMap copies `src` struct to the `dst` map.
