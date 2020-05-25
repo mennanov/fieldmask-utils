@@ -186,6 +186,45 @@ func TestStructToStruct_NestedStruct_EmptyDst(t *testing.T) {
 	}, dst)
 }
 
+func TestStructToStruct_NestedStruct_EmptyDst_OptionDst(t *testing.T) {
+	opts := fieldmask_utils.WithTag("db")
+	type ASrc struct {
+		Field1 string
+		Field2 int `db:"SomeField"`
+	}
+	type BSrc struct {
+		Field1 string `struct:"a_name"`
+		A      ASrc   `db:"AnotherName"`
+	}
+	src := &BSrc{
+		Field1: "B Field1",
+		A: ASrc{
+			Field1: "A Field 1",
+			Field2: 1,
+		},
+	}
+
+	type ADst struct {
+		Field1    string
+		SomeField int
+	}
+	type BDst struct {
+		Field1      string
+		AnotherName ADst
+	}
+	dst := &BDst{}
+
+	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, opts)
+	require.NoError(t, err)
+	assert.Equal(t, &BDst{
+		Field1: src.Field1,
+		AnotherName: ADst{
+			SomeField: src.A.Field2,
+		},
+	}, dst)
+}
+
 func TestStructToStruct_NestedStruct_NonEmptyDst(t *testing.T) {
 	type A struct {
 		Field1 string
