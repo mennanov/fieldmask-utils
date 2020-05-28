@@ -1,16 +1,24 @@
 language: go
 
-go:
-  - '1.9'
-  - '1.10'
-  - '1.11'
-  - '1.12'
-  - '1.13'
-  - master
-
-env:
-  - GO111MODULE=on
-  - GOCACHE=off
+jobs:
+  include:
+    - name: 'go1.9'
+      go: '1.9'
+    - name: 'go1.10'
+        go: '1.10'
+        env: GOCACHE=off
+    - name: 'go1.11'
+        go: '1.11'
+        env: GO111MODULE=on GOCACHE=off
+    - name: 'go1.12'
+        go: '1.12'
+        env: GO111MODULE=on
+    - name: 'go1.13'
+        go: '1.13'
+        env: GO111MODULE=on
+    - name: 'go1.14'
+        go: '1.14'
+        env: GO111MODULE=on
 
 install:
   - go get golang.org/x/tools/cmd/cover
