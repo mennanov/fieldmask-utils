@@ -9,7 +9,7 @@ jobs:
       env: GOCACHE=off
     - name: 'go1.11'
       go: '1.11'
-      env: GO111MODULE=on GOCACHE=off
+      env: GOCACHE=off
     - name: 'go1.12'
       go: '1.12'
       env: GO111MODULE=on
