@@ -15,7 +15,7 @@ import (
 // `src` and `dst` must be coherent in terms of the field names, but it is not required for them to be of the same type.
 // Unexported fields are copied only if the corresponding struct filter is empty and `dst` is assignable to `src`.
 func StructToStruct(filter FieldFilter, src, dst interface{}, userOpts ...Option) error {
-	opts := NewDefaultOptions()
+	opts := newDefaultOptions()
 	for _, o := range userOpts {
 		o(opts)
 	}
@@ -35,7 +35,7 @@ func StructToStruct(filter FieldFilter, src, dst interface{}, userOpts ...Option
 	return structToStruct(filter, &srcVal, &dstVal, opts)
 }
 
-func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *Options) error {
+func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *options) error {
 	if src.Kind() != dst.Kind() {
 		return errors.Errorf("src kind %s differs from dst kind %s", src.Kind(), dst.Kind())
 	}
@@ -191,20 +191,23 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *Op
 	return nil
 }
 
-type Options struct {
+// options are used in StructToStruct and StructToMap functions to modify the copying behavior.
+type options struct {
 	DstTag string
 }
 
-type Option func(*Options)
+// Option function modifies the given options.
+type Option func(*options)
 
+// WithTag sets the destination field name
 func WithTag(s string) Option {
-	return func(o *Options) {
+	return func(o *options) {
 		o.DstTag = s
 	}
 }
 
-func NewDefaultOptions() *Options {
-	return &Options{}
+func newDefaultOptions() *options {
+	return &options{}
 }
 
 func dstKey(tag string, f reflect.StructField) string {
@@ -226,7 +229,7 @@ func dstKey(tag string, f reflect.StructField) string {
 // Behavior is similar to `StructToStruct`.
 // Arrays in the non-empty dst are converted to slices.
 func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}, userOpts ...Option) error {
-	opts := NewDefaultOptions()
+	opts := newDefaultOptions()
 	for _, o := range userOpts {
 		o(opts)
 	}
