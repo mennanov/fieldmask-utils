@@ -2,6 +2,7 @@ package fieldmask_utils
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -13,7 +14,12 @@ import (
 // Only the fields where FieldFilter returns true will be copied to `dst`.
 // `src` and `dst` must be coherent in terms of the field names, but it is not required for them to be of the same type.
 // Unexported fields are copied only if the corresponding struct filter is empty and `dst` is assignable to `src`.
-func StructToStruct(filter FieldFilter, src, dst interface{}) error {
+func StructToStruct(filter FieldFilter, src, dst interface{}, userOpts ...Option) error {
+	opts := NewDefaultOptions()
+	for _, o := range userOpts {
+		o(opts)
+	}
+
 	dstVal := reflect.ValueOf(dst)
 	if dstVal.Kind() != reflect.Ptr {
 		return errors.Errorf("dst must be a pointer, %s given", dstVal.Kind())
@@ -26,10 +32,10 @@ func StructToStruct(filter FieldFilter, src, dst interface{}) error {
 	if dstVal.Kind() != reflect.Struct {
 		return errors.Errorf("dst kind must be a struct, %s given", dstVal.Kind())
 	}
-	return structToStruct(filter, &srcVal, &dstVal)
+	return structToStruct(filter, &srcVal, &dstVal, opts)
 }
 
-func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
+func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *Options) error {
 	if src.Kind() != dst.Kind() {
 		return errors.Errorf("src kind %s differs from dst kind %s", src.Kind(), dst.Kind())
 	}
@@ -60,7 +66,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 			}
 			newDst := reflect.ValueOf(newDstProto)
 
-			if err := structToStruct(filter, &newSrc, &newDst); err != nil {
+			if err := structToStruct(filter, &newSrc, &newDst, userOptions); err != nil {
 				return err
 			}
 
@@ -79,7 +85,9 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 		}
 
 		for i := 0; i < src.NumField(); i++ {
-			fieldName := src.Type().Field(i).Name
+			srcType := src.Type()
+			fieldName := srcType.Field(i).Name
+			dstName := dstKey(userOptions.DstTag, srcType.Field(i))
 
 			subFilter, ok := filter.Filter(fieldName)
 			if !ok {
@@ -87,13 +95,13 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 				continue
 			}
 
-			dstField := dst.FieldByName(fieldName)
+			dstField := dst.FieldByName(dstName)
 			if !dstField.CanSet() {
-				return errors.Errorf("Can't set a value on a destination field %s", fieldName)
+				return errors.Errorf("Can't set a value on a destination field %s", dstName)
 			}
 
 			srcField := src.FieldByName(fieldName)
-			if err := structToStruct(subFilter, &srcField, &dstField); err != nil {
+			if err := structToStruct(subFilter, &srcField, &dstField, userOptions); err != nil {
 				return err
 			}
 		}
@@ -110,7 +118,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 		}
 
 		srcElem, dstElem := src.Elem(), dst.Elem()
-		if err := structToStruct(filter, &srcElem, &dstElem); err != nil {
+		if err := structToStruct(filter, &srcElem, &dstElem, userOptions); err != nil {
 			return err
 		}
 
@@ -129,7 +137,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 		}
 
 		srcElem, dstElem := src.Elem(), dst.Elem()
-		if err := structToStruct(filter, &srcElem, &dstElem); err != nil {
+		if err := structToStruct(filter, &srcElem, &dstElem, userOptions); err != nil {
 			return err
 		}
 
@@ -147,7 +155,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 				dstItem = reflect.New(dst.Type().Elem()).Elem()
 			}
 
-			if err := structToStruct(filter, &srcItem, &dstItem); err != nil {
+			if err := structToStruct(filter, &srcItem, &dstItem, userOptions); err != nil {
 				return err
 			}
 
@@ -168,7 +176,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 		for i := 0; i < src.Len(); i++ {
 			srcItem := src.Index(i)
 			dstItem := dst.Index(i)
-			if err := structToStruct(filter, &srcItem, &dstItem); err != nil {
+			if err := structToStruct(filter, &srcItem, &dstItem, userOptions); err != nil {
 				return errors.WithStack(err)
 			}
 		}
@@ -183,10 +191,45 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value) error {
 	return nil
 }
 
+type Options struct {
+	DstTag string
+}
+
+type Option func(*Options)
+
+func WithTag(s string) Option {
+	return func(o *Options) {
+		o.DstTag = s
+	}
+}
+
+func NewDefaultOptions() *Options {
+	return &Options{}
+}
+
+func dstKey(tag string, f reflect.StructField) string {
+	if tag == "" {
+		return f.Name
+	}
+	lookupResult, ok := f.Tag.Lookup(tag)
+	if !ok {
+		return f.Name
+	}
+	firstComma := strings.Index(lookupResult, ",")
+	if firstComma == -1 {
+		return lookupResult
+	}
+	return lookupResult[:firstComma]
+}
+
 // StructToMap copies `src` struct to the `dst` map.
 // Behavior is similar to `StructToStruct`.
 // Arrays in the non-empty dst are converted to slices.
-func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}) error {
+func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}, userOpts ...Option) error {
+	opts := NewDefaultOptions()
+	for _, o := range userOpts {
+		o(opts)
+	}
 	srcVal := indirect(reflect.ValueOf(src))
 	srcType := srcVal.Type()
 	for i := 0; i < srcVal.NumField(); i++ {
@@ -197,37 +240,38 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			continue
 		}
 		srcField := srcVal.FieldByName(fieldName)
+		dstName := dstKey(opts.DstTag, srcType.Field(i))
 
 		switch srcField.Kind() {
 		case reflect.Ptr, reflect.Interface:
 			if srcField.IsNil() {
-				dst[fieldName] = nil
+				dst[dstName] = nil
 				continue
 			}
 
 			var newValue map[string]interface{}
-			existingValue, ok := dst[fieldName]
+			existingValue, ok := dst[dstName]
 			if ok {
 				newValue = existingValue.(map[string]interface{})
 			} else {
 				newValue = make(map[string]interface{})
 			}
-			if err := StructToMap(subFilter, srcField.Interface(), newValue); err != nil {
+			if err := StructToMap(subFilter, srcField.Interface(), newValue, userOpts...); err != nil {
 				return err
 			}
-			dst[fieldName] = newValue
+			dst[dstName] = newValue
 
 		case reflect.Array, reflect.Slice:
 			// Check if it is a slice of primitive values.
 			itemKind := srcField.Type().Elem().Kind()
 			if itemKind != reflect.Ptr && itemKind != reflect.Struct && itemKind != reflect.Interface {
 				// Handle this array/slice as a regular non-nested data structure: copy it entirely to dst.
-				dst[fieldName] = srcField.Interface()
+				dst[dstName] = srcField.Interface()
 				continue
 			}
 			srcLen := srcField.Len()
 			var newValue []map[string]interface{}
-			existingValue, ok := dst[fieldName]
+			existingValue, ok := dst[dstName]
 			if ok {
 				v := reflect.ValueOf(existingValue)
 				if v.Kind() == reflect.Array {
@@ -259,30 +303,30 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			}
 			for i := 0; i < srcLen; i++ {
 				subValue := srcField.Index(i)
-				if err := StructToMap(subFilter, subValue.Interface(), newValue[i]); err != nil {
+				if err := StructToMap(subFilter, subValue.Interface(), newValue[i], userOpts...); err != nil {
 					return err
 				}
 			}
 			// Truncate the dst to the length of src.
 			newValue = newValue[:srcLen]
-			dst[fieldName] = newValue
+			dst[dstName] = newValue
 
 		case reflect.Struct:
 			var newValue map[string]interface{}
-			existingValue, ok := dst[fieldName]
+			existingValue, ok := dst[dstName]
 			if ok {
 				newValue = existingValue.(map[string]interface{})
 			} else {
 				newValue = make(map[string]interface{})
 			}
-			if err := StructToMap(subFilter, srcField.Interface(), newValue); err != nil {
+			if err := StructToMap(subFilter, srcField.Interface(), newValue, userOpts...); err != nil {
 				return err
 			}
-			dst[fieldName] = newValue
+			dst[dstName] = newValue
 
 		default:
 			// Set a value on a map.
-			dst[fieldName] = srcField.Interface()
+			dst[dstName] = srcField.Interface()
 		}
 	}
 	return nil

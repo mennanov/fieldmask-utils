@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mennanov/fieldmask-utils"
+	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 )
 
 func TestStructToStruct_SimpleStruct(t *testing.T) {
@@ -182,6 +182,45 @@ func TestStructToStruct_NestedStruct_EmptyDst(t *testing.T) {
 				Field1: "",
 				Field2: src.B.A.Field2,
 			},
+		},
+	}, dst)
+}
+
+func TestStructToStruct_NestedStruct_EmptyDst_OptionDst(t *testing.T) {
+	opts := fieldmask_utils.WithTag("db")
+	type ASrc struct {
+		Field1 string
+		Field2 int `db:"SomeField"`
+	}
+	type BSrc struct {
+		Field1 string `struct:"a_name"`
+		A      ASrc   `db:"AnotherName"`
+	}
+	src := &BSrc{
+		Field1: "B Field1",
+		A: ASrc{
+			Field1: "A Field 1",
+			Field2: 1,
+		},
+	}
+
+	type ADst struct {
+		Field1    string
+		SomeField int
+	}
+	type BDst struct {
+		Field1      string
+		AnotherName ADst
+	}
+	dst := &BDst{}
+
+	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, opts)
+	require.NoError(t, err)
+	assert.Equal(t, &BDst{
+		Field1: src.Field1,
+		AnotherName: ADst{
+			SomeField: src.A.Field2,
 		},
 	}, dst)
 }
@@ -1003,6 +1042,35 @@ func TestStructToMap_NestedStruct_EmptyDst(t *testing.T) {
 		"Field1": src.Field1,
 		"A": map[string]interface{}{
 			"Field2": src.A.Field2,
+		},
+	}, dst)
+}
+
+func TestStructToMap_NestedStruct_EmptyDst_OptionDst(t *testing.T) {
+	opts := fieldmask_utils.WithTag("db")
+	type A struct {
+		Field1 string
+		Field2 int `db:"some_field"`
+	}
+	type B struct {
+		Field1 string `struct:"a_name"`
+		A      A      `db:"another_name"`
+	}
+	src := &B{
+		Field1: "B Field1",
+		A: A{
+			Field1: "A Field 1",
+			Field2: 1,
+		},
+	}
+	dst := make(map[string]interface{})
+	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
+	err := fieldmask_utils.StructToMap(mask, src, dst, opts)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": src.Field1,
+		"another_name": map[string]interface{}{
+			"some_field": src.A.Field2,
 		},
 	}, dst)
 }
