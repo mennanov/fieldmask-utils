@@ -101,7 +101,7 @@ func TestMaskFromString(t *testing.T) {
 				},
 			}, 2,
 		},
-		{"foo, bar{c {d,e{f,\ng,h}}},t", fieldmask_utils.Mask{
+		{"foo, bar{c {d,e{f,\ng,h}}},\tt", fieldmask_utils.Mask{
 			"foo": fieldmask_utils.Mask{},
 			"bar": fieldmask_utils.Mask{
 				"c": fieldmask_utils.Mask{

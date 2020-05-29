@@ -197,56 +197,45 @@ func MaskInverseFromString(s string) MaskInverse {
 // Use it in tests only as the input string is not validated and the underlying function panics in case of a
 // parse error.
 func FieldFilterFromString(input string, filter func() FieldFilterContainer) FieldFilterContainer {
-	m, _ := filterFromRunes([]rune(input), filter)
-	return m
-}
-
-func filterFromRunes(runes []rune, filter func() FieldFilterContainer) (FieldFilterContainer, int) {
-	mask := filter()
 	var fieldName []string
-	runes = append(runes, []rune(",")...)
-	pos := 0
-	for pos < len(runes) {
-		char := fmt.Sprintf("%c", runes[pos])
+	mask := filter()
+	masks := []FieldFilterContainer{mask}
+	for pos, r := range input {
+		char := string(r)
 		switch char {
 		case " ", "\n", "\t":
-			// Ignore white spaces.
+		// Skip white spaces.
 
-		case ",", "{", "}":
+		case ",":
+			if len(fieldName) != 0 {
+				mask.Set(strings.Join(fieldName, ""), filter())
+				fieldName = nil
+			}
+
+		case "{":
 			if len(fieldName) == 0 {
-				switch char {
-				case "}":
-					return mask, pos
-				case ",":
-					pos++
-					continue
-				default:
-					panic("invalid mask string format")
-				}
+				panic(fmt.Sprintf("invalid mask format at position %d: got '{', expected a character", pos))
 			}
+			subMask := filter()
+			mask.Set(strings.Join(fieldName, ""), subMask)
+			fieldName = nil
+			masks = append(masks, mask)
+			mask = subMask
 
-			var subMask FieldFilterContainer
-			if char == "{" {
-				var jump int
-				// Parse nested tree.
-				subMask, jump = filterFromRunes(runes[pos+1:], filter)
-				pos += jump + 1
-			} else {
-				subMask = filter()
+		case "}":
+			if len(fieldName) != 0 {
+				mask.Set(strings.Join(fieldName, ""), filter())
+				fieldName = nil
 			}
-			f := strings.Join(fieldName, "")
-			mask.Set(f, subMask)
-			// Reset FieldName.
-			fieldName = []string{}
-
-			if char == "}" {
-				return mask, pos
-			}
+			mask = masks[len(masks)-1]
+			masks = masks[:len(masks)-1]
 
 		default:
 			fieldName = append(fieldName, char)
 		}
-		pos++
 	}
-	return mask, pos
+	if len(fieldName) != 0 {
+		mask.Set(strings.Join(fieldName, ""), filter())
+	}
+	return mask
 }
