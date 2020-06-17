@@ -15,7 +15,7 @@ Features:
 Copy from a protobuf message to a protobuf message:
 
 ```proto
-// test.proto
+// testproto/test.proto
 
 message UpdateUserRequest {
     User user = 1;
