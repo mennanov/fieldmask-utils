@@ -24,8 +24,6 @@ type: docker
 steps:
   - name: test
     image: golang:1.14
-    environment:
-      GO111MODULE: "on"
     commands:
       - go test ./...
 
@@ -37,8 +35,6 @@ type: docker
 steps:
   - name: test
     image: golang:1.13
-    environment:
-      GO111MODULE: "on"
     commands:
       - go test ./...
 
@@ -50,8 +46,6 @@ type: docker
 steps:
   - name: test
     image: golang:1.12
-    environment:
-      GO111MODULE: "on"
     commands:
       - go test ./...
 
@@ -64,41 +58,7 @@ type: docker
 steps:
   - name: test
     image: golang:1.11
-    environment:
-      GO111MODULE: "on"
     commands:
-      - go test ./...
-
----
-kind: pipeline
-name: go1.10
-type: docker
-
-workspace:
-  base: /go
-  path: src/github.com/mennanov/fieldmask-utils
-
-steps:
-  - name: test
-    image: golang:1.10
-    commands:
-      - go get -t ./...
-      - go test ./...
-
----
-kind: pipeline
-name: go1.9
-type: docker
-
-workspace:
-  base: /go
-  path: src/github.com/mennanov/fieldmask-utils
-
-steps:
-  - name: test
-    image: golang:1.9
-    commands:
-      - go get -t ./...
       - go test ./...
 
 ---
@@ -111,4 +71,4 @@ steps:
     image: golang:1.15
     commands:
       - go get -u github.com/mgechev/revive
-      - revive -formatter=friendly -config=revive.toml -exclude=vendor/... ./...
+      - revive -formatter=friendly -config=revive.toml ./...
