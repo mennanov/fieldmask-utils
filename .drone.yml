@@ -1,12 +1,10 @@
 kind: pipeline
-name: go1.14
+name: go1.15
 type: docker
 
 steps:
   - name: test
-    image: golang:1.14
-    environment:
-      GO111MODULE: "on"
+    image: golang:1.15
     commands:
       - go test -v -coverprofile=coverage.txt -covermode=atomic ./...
 
@@ -17,6 +15,19 @@ steps:
         from_secret: codecov-token
       files:
         - coverage.txt
+
+---
+kind: pipeline
+name: go1.14
+type: docker
+
+steps:
+  - name: test
+    image: golang:1.14
+    environment:
+      GO111MODULE: "on"
+    commands:
+      - go test ./...
 
 ---
 kind: pipeline
@@ -97,7 +108,7 @@ type: docker
 
 steps:
   - name: lint
-    image: golang:1.14
+    image: golang:1.15
     commands:
       - go get -u github.com/mgechev/revive
       - revive -formatter=friendly -config=revive.toml -exclude=vendor/... ./...
