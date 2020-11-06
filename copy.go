@@ -86,21 +86,33 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 		for i := 0; i < src.NumField(); i++ {
 			srcType := src.Type()
-			fieldName := srcType.Field(i).Name
-			dstName := dstKey(userOptions.DstTag, srcType.Field(i))
+			srcStructField := srcType.Field(i)
+			fieldName := srcStructField.Name
+			dstName := dstKey(userOptions.DstTag, srcStructField)
 
+			dstField := dst.FieldByName(dstName)
+			if !dstField.CanSet() {
+				// If the field can't be set and is exported, return an error
+				if isFieldExported(srcStructField) {
+					return errors.Errorf("Can't set a value on a destination field %s", dstName)
+				}
+				continue
+			}
+
+			srcField := src.FieldByName(fieldName)
 			subFilter, ok := filter.Filter(fieldName)
 			if !ok {
+				if isOneOfField(srcType.Field(i)) {
+					// In the case of oneof fields, pass the current subFilter to the nested
+					// oneof fields
+					if err := structToStruct(filter, &srcField, &dstField, userOptions); err != nil {
+						return err
+					}
+				}
 				// Skip this field.
 				continue
 			}
 
-			dstField := dst.FieldByName(dstName)
-			if !dstField.CanSet() {
-				return errors.Errorf("Can't set a value on a destination field %s", dstName)
-			}
-
-			srcField := src.FieldByName(fieldName)
 			if err := structToStruct(subFilter, &srcField, &dstField, userOptions); err != nil {
 				return err
 			}
@@ -191,6 +203,14 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 	return nil
 }
 
+func isFieldExported(srcStructField reflect.StructField) bool {
+	return srcStructField.PkgPath == ""
+}
+
+func isOneOfField(field reflect.StructField) bool {
+	return field.Tag.Get("protobuf_oneof") != ""
+}
+
 // options are used in StructToStruct and StructToMap functions to modify the copying behavior.
 type options struct {
 	DstTag string
@@ -236,14 +256,21 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 	srcVal := indirect(reflect.ValueOf(src))
 	srcType := srcVal.Type()
 	for i := 0; i < srcVal.NumField(); i++ {
-		fieldName := srcType.Field(i).Name
+		srcStructField := srcType.Field(i)
+
+		if !isFieldExported(srcStructField) {
+			// skip not exported fields
+			continue
+		}
+
+		fieldName := srcStructField.Name
 		subFilter, ok := filter.Filter(fieldName)
 		if !ok {
 			// Skip this field.
 			continue
 		}
 		srcField := srcVal.FieldByName(fieldName)
-		dstName := dstKey(opts.DstTag, srcType.Field(i))
+		dstName := dstKey(opts.DstTag, srcStructField)
 
 		switch srcField.Kind() {
 		case reflect.Ptr, reflect.Interface:

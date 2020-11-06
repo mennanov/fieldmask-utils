@@ -50,3 +50,18 @@ message UpdateUserRequest {
     User user = 1;
     google.protobuf.FieldMask field_mask = 2;
 }
+
+message Organization {
+    uint32 id = 1;
+    string name = 2;
+    Image avatar = 3;
+    repeated User users = 4;
+}
+
+message ChangeNotification {
+    int32 id = 1;
+    oneof changed {
+        User user = 2;
+        Organization organization = 3;
+    }
+}

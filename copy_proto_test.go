@@ -18,6 +18,7 @@ import (
 
 var testUserFull *testproto.User
 var testUserPartial *testproto.User
+var testOrganization *testproto.Organization
 
 func init() {
 	ts := &timestamp.Timestamp{
@@ -83,6 +84,13 @@ func init() {
 		},
 	}
 
+	testOrganization = &testproto.Organization{
+		Id:     1,
+		Name:   "awesome organization",
+		Avatar: &testproto.Image{OriginalUrl: "org_1.jpg", ResizedUrl: "org_1_res.jpg"},
+		Users:  []*testproto.User{testUserFull},
+	}
+
 	extraUser, err := ptypes.MarshalAny(testUserFull)
 	if err != nil {
 		panic(err)
@@ -126,6 +134,79 @@ func TestStructToStruct_Proto(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, testUserFull.Id, extraUser.Id)
 	assert.Equal(t, testUserFull.Avatar.OriginalUrl, extraUser.Avatar.OriginalUrl)
+}
+
+func TestStructToStruct_ProtoOneOf(t *testing.T) {
+	usrChangeNotification := &testproto.ChangeNotification{
+		Id: 1,
+		Changed: &testproto.ChangeNotification_User{
+			User: testUserFull,
+		},
+	}
+	orgChangeNotification := &testproto.ChangeNotification{
+		Id: 2,
+		Changed: &testproto.ChangeNotification_Organization{
+			Organization: testOrganization,
+		},
+	}
+	testCases := []struct {
+		name       string
+		maskString string
+		src        *testproto.ChangeNotification
+		dst        *testproto.ChangeNotification
+		expected   *testproto.ChangeNotification
+	}{
+		{
+			name:       "copies entire message to an empty dest with full mask",
+			maskString: "Id,User",
+			src:        usrChangeNotification,
+			dst:        &testproto.ChangeNotification{},
+			expected:   usrChangeNotification,
+		},
+		{
+			name:       "copies only the relevant part of the message to an empty dest with a partial mask mask",
+			maskString: "Id",
+			src:        orgChangeNotification,
+			dst:        &testproto.ChangeNotification{},
+			expected:   &testproto.ChangeNotification{Id: orgChangeNotification.Id},
+		},
+		{
+			name:       "copies nested fields in oneof correctly",
+			maskString: "User{MaleName}",
+			src:        usrChangeNotification,
+			dst:        &testproto.ChangeNotification{},
+			expected: &testproto.ChangeNotification{
+				Changed: &testproto.ChangeNotification_User{
+					User: &testproto.User{
+						Name: usrChangeNotification.GetUser().GetName(),
+					},
+				},
+			},
+		},
+		//{
+		//	name:       "replace the oneof field in the dest if the field masks sets a different one",
+		//	maskString: "User",
+		//	src:        usrChangeNotification,
+		//	dst:        orgChangeNotification,
+		//	expected:   &testproto.ChangeNotification{Id: orgChangeNotification.Id, Changed: usrChangeNotification.GetChanged()},
+		//},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Test Copy with full mask
+			mask := fieldmask_utils.MaskFromString(testCase.maskString)
+			err := fieldmask_utils.StructToStruct(mask, testCase.src, testCase.dst)
+			require.NoError(t, err)
+			assert.Equalf(t, testCase.expected.GetId(), testCase.dst.GetId(),
+				"Change IDs did not match. Got:\n%d\nwant:\n%d", testCase.dst.GetId(), testCase.expected.GetId())
+			assert.Truef(t, proto.Equal(testCase.dst.GetUser(), testCase.expected.GetUser()),
+				"Users did not match. Got:\n%s\nwant:\n%s",
+				proto.MarshalTextString(testCase.dst.GetUser()), proto.MarshalTextString(testCase.expected.GetUser()))
+			assert.Truef(t, proto.Equal(testCase.dst.GetOrganization(), testCase.expected.GetOrganization()),
+				"Organizations did not match. Got:\n%s\nwant:\n%s",
+				proto.MarshalTextString(testCase.dst.GetOrganization()), proto.MarshalTextString(testCase.expected.GetOrganization()))
+		})
+	}
 }
 
 func TestStructToStruct_ExistingAnyPreserved(t *testing.T) {
