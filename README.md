@@ -10,6 +10,8 @@ Features:
 * Extensible masks (e.g. inverse mask: copy all except those mentioned, etc.)
 * Supports [Protobuf Any](https://developers.google.com/protocol-buffers/docs/proto3#any) message types.
 
+If you're looking for a simple FieldMask library to work with protobuf messages only (not arbitrary structs) consider this tiny repo: [https://github.com/mennanov/fmutils](https://github.com/mennanov/fmutils)
+
 ### Examples
 
 Copy from a protobuf message to a protobuf message:
