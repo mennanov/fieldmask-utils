@@ -6,6 +6,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"google.golang.org/genproto/protobuf/field_mask"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -321,4 +322,32 @@ func TestStructToMap_PartialProtoSuccess(t *testing.T) {
 		"Name":        nil,
 	}
 	assert.Equal(t, expected, userDst)
+}
+
+func TestStructToMap_WithUnExportField(t *testing.T) {
+	// struct: timestamp has 'state' which is unexport field in github.com/golang/protobuf/ptypes/timestamp.
+	type UnexportStruct struct {
+		Field1 *timestamp.Timestamp
+		Field2 int
+	}
+	unexportStruct := UnexportStruct{
+		Field1: &timestamp.Timestamp{
+			Seconds: 1,
+			Nanos:   1,
+		},
+		Field2: 2,
+	}
+
+	dst := map[string]interface{}{}
+	mask, _ := fieldmask_utils.MaskFromProtoFieldMask(&field_mask.FieldMask{Paths: []string{"Field1", "Field2"}}, func(s string) string { return s })
+	err := fieldmask_utils.StructToMap(mask, unexportStruct, dst)
+	assert.Nil(t, err)
+	expected := map[string]interface{}{
+		"Field1": map[string]interface{}{
+			"Seconds": int64(1),
+			"Nanos":   int32(1),
+		},
+		"Field2": 2,
+	}
+	assert.Equal(t, expected, dst)
 }
