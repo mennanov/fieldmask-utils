@@ -55,31 +55,6 @@ steps:
 
 ---
 kind: pipeline
-name: go1.12
-type: docker
-
-steps:
-  - name: test
-    image: golang:1.12
-    commands:
-      - go vet ./...
-      - go test ./...
-
-
----
-kind: pipeline
-name: go1.11
-type: docker
-
-steps:
-  - name: test
-    image: golang:1.11
-    commands:
-      - go vet ./...
-      - go test ./...
-
----
-kind: pipeline
 name: lint
 type: docker
 
