@@ -3,7 +3,6 @@ package fieldmask_utils_test
 import (
 	"testing"
 
-	"github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/protobuf/field_mask"
@@ -74,7 +73,7 @@ func TestMaskFromProtoFieldMask_Failure(t *testing.T) {
 	}
 
 	for _, fieldMask := range testCases {
-		_, err := fieldmask_utils.MaskFromProtoFieldMask(fieldMask, generator.CamelCase)
+		_, err := fieldmask_utils.MaskFromProtoFieldMask(fieldMask, func(s string) string { return s })
 		assert.NotNil(t, err)
 	}
 }

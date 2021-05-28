@@ -3,14 +3,12 @@ package fieldmask_utils_test
 import (
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes/any"
-	"github.com/golang/protobuf/ptypes/timestamp"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/golang/protobuf/ptypes"
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 	"github.com/mennanov/fieldmask-utils/testproto"
@@ -20,7 +18,7 @@ var testUserFull *testproto.User
 var testUserPartial *testproto.User
 
 func init() {
-	ts := &timestamp.Timestamp{
+	ts := &timestamppb.Timestamp{
 		Seconds: 5, // easy to verify
 		Nanos:   6, // easy to verify
 	}
@@ -75,15 +73,15 @@ func init() {
 		Tags:    []string{"tag1", "tag2", "tag3"},
 		Friends: []*testproto.User{friend1},
 		Name:    &testproto.User_MaleName{MaleName: "John"},
-		Details: []*any.Any{
+		Details: []*anypb.Any{
 			{
-				TypeUrl: "example.com/example/" + proto.MessageName(ts),
+				TypeUrl: string("example.com/example/" + proto.MessageName(ts)),
 				Value:   serializedTs,
 			},
 		},
 	}
 
-	extraUser, err := ptypes.MarshalAny(testUserFull)
+	extraUser, err := anypb.New(testUserFull)
 	if err != nil {
 		panic(err)
 	}
@@ -122,7 +120,7 @@ func TestStructToStruct_Proto(t *testing.T) {
 	assert.Equal(t, map[string]string(nil), userDst.Meta)
 
 	extraUser := &testproto.User{}
-	err = ptypes.UnmarshalAny(userDst.ExtraUser, extraUser)
+	err = userDst.ExtraUser.UnmarshalTo(extraUser)
 	require.NoError(t, err)
 	assert.Equal(t, testUserFull.Id, extraUser.Id)
 	assert.Equal(t, testUserFull.Avatar.OriginalUrl, extraUser.Avatar.OriginalUrl)
@@ -133,7 +131,7 @@ func TestStructToStruct_ExistingAnyPreserved(t *testing.T) {
 		Id:       42,
 		Username: "username",
 	}
-	existingExtraUserAny, err := ptypes.MarshalAny(existingExtraUser)
+	existingExtraUserAny, err := anypb.New(existingExtraUser)
 	require.NoError(t, err)
 	userDst := &testproto.User{
 		ExtraUser: existingExtraUserAny,
@@ -143,7 +141,7 @@ func TestStructToStruct_ExistingAnyPreserved(t *testing.T) {
 	require.NoError(t, err)
 
 	extraUser := &testproto.User{}
-	err = ptypes.UnmarshalAny(userDst.ExtraUser, extraUser)
+	err = userDst.ExtraUser.UnmarshalTo(extraUser)
 	require.NoError(t, err)
 	assert.Equal(t, testUserFull.Id, extraUser.Id)
 	assert.Equal(t, testUserFull.Avatar.OriginalUrl, extraUser.Avatar.OriginalUrl)
