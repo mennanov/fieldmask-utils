@@ -237,16 +237,16 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 	srcType := srcVal.Type()
 	for i := 0; i < srcVal.NumField(); i++ {
 		fieldName := srcType.Field(i).Name
-		// fix bug: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method
-		if !checkAccess(fieldName) {
-			continue
-		}
 		subFilter, ok := filter.Filter(fieldName)
 		if !ok {
 			// Skip this field.
 			continue
 		}
 		srcField := srcVal.FieldByName(fieldName)
+		if !srcField.CanInterface() {
+			continue
+		}
+
 		dstName := dstKey(opts.DstTag, srcType.Field(i))
 
 		switch srcField.Kind() {
@@ -344,12 +344,4 @@ func indirect(v reflect.Value) reflect.Value {
 		v = v.Elem()
 	}
 	return v
-}
-
-func checkAccess(fieldName string) bool {
-	// unexported field begins with lower case in golang
-	if strings.ToUpper(fieldName[:1]) == fieldName[:1] {
-		return true
-	}
-	return false
 }

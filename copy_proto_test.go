@@ -326,11 +326,11 @@ func TestStructToMap_PartialProtoSuccess(t *testing.T) {
 
 func TestStructToMap_WithUnExportField(t *testing.T) {
 	// struct: timestamp has 'state' which is unexport field in github.com/golang/protobuf/ptypes/timestamp.
-	type UnexportStruct struct {
+	type UnExportStruct struct {
 		Field1 *timestamp.Timestamp
 		Field2 int
 	}
-	unexportStruct := UnexportStruct{
+	src := UnExportStruct{
 		Field1: &timestamp.Timestamp{
 			Seconds: 1,
 			Nanos:   1,
@@ -340,7 +340,7 @@ func TestStructToMap_WithUnExportField(t *testing.T) {
 
 	dst := map[string]interface{}{}
 	mask, _ := fieldmask_utils.MaskFromProtoFieldMask(&field_mask.FieldMask{Paths: []string{"Field1", "Field2"}}, func(s string) string { return s })
-	err := fieldmask_utils.StructToMap(mask, unexportStruct, dst)
+	err := fieldmask_utils.StructToMap(mask, src, dst)
 	assert.Nil(t, err)
 	expected := map[string]interface{}{
 		"Field1": map[string]interface{}{
@@ -350,4 +350,35 @@ func TestStructToMap_WithUnExportField(t *testing.T) {
 		"Field2": 2,
 	}
 	assert.Equal(t, expected, dst)
+}
+
+func TestStructToStruct_WithUnExportField(t *testing.T) {
+	// struct: timestamp has 'state' which is unexport field in github.com/golang/protobuf/ptypes/timestamp.
+	type UnExportStruct struct {
+		Field1 *timestamp.Timestamp
+		Field2 int
+	}
+	src := &UnExportStruct{
+		Field1: &timestamp.Timestamp{
+			Seconds: 1,
+			Nanos:   1,
+		},
+		Field2: 2,
+	}
+
+	dst := &UnExportStruct{}
+	mask, _ := fieldmask_utils.MaskFromProtoFieldMask(&field_mask.FieldMask{Paths: []string{"Field1", "Field2"}}, func(s string) string { return s })
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	assert.Nil(t, err)
+	expected := &UnExportStruct{
+		Field1: &timestamp.Timestamp{
+			Seconds: 1,
+			Nanos:   1,
+		},
+		Field2: 2,
+	}
+	assert.Equal(t, expected, dst)
+	src.Field1.Seconds = 10000
+	dst.Field1.Seconds = 10
+	assert.NotEqual(t, dst.Field1.Seconds, src.Field1.Seconds)
 }
