@@ -95,12 +95,17 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 				continue
 			}
 
+			srcField := src.FieldByName(fieldName)
+			if !srcField.CanInterface() {
+				// Skip unexported field
+				continue
+			}
+
 			dstField := dst.FieldByName(dstName)
 			if !dstField.CanSet() {
 				return errors.Errorf("Can't set a value on a destination field %s", dstName)
 			}
 
-			srcField := src.FieldByName(fieldName)
 			if err := structToStruct(subFilter, &srcField, &dstField, userOptions); err != nil {
 				return err
 			}
@@ -244,6 +249,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 		}
 		srcField := srcVal.FieldByName(fieldName)
 		if !srcField.CanInterface() {
+			// Skip unexported field
 			continue
 		}
 
