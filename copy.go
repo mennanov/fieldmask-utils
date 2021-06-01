@@ -4,10 +4,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // StructToStruct copies `src` struct to `dst` struct using the given FieldFilter.
@@ -42,43 +41,6 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 	switch src.Kind() {
 	case reflect.Struct:
-		if srcAny, ok := src.Interface().(any.Any); ok {
-			dstAny, ok := src.Interface().(any.Any)
-			if !ok {
-				return errors.Errorf("dst type is %s, expected: %s ", dst.Type(), "any.Any")
-			}
-
-			newSrcProto, err := ptypes.Empty(&srcAny)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			if err := ptypes.UnmarshalAny(&srcAny, newSrcProto); err != nil {
-				return errors.WithStack(err)
-			}
-			newSrc := reflect.ValueOf(newSrcProto)
-
-			newDstProto, err := ptypes.Empty(&dstAny)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			if err := ptypes.UnmarshalAny(&dstAny, newDstProto); err != nil {
-				return errors.WithStack(err)
-			}
-			newDst := reflect.ValueOf(newDstProto)
-
-			if err := structToStruct(filter, &newSrc, &newDst, userOptions); err != nil {
-				return err
-			}
-
-			newDstAny, err := ptypes.MarshalAny(newDst.Interface().(proto.Message))
-			if err != nil {
-				return errors.WithStack(err)
-			}
-
-			dst.Set(reflect.ValueOf(*newDstAny))
-			return nil
-		}
-
 		if dst.CanSet() && dst.Type().AssignableTo(src.Type()) && filter.IsEmpty() {
 			dst.Set(*src)
 			return nil
@@ -120,6 +82,37 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 		if dst.IsNil() {
 			// If dst is nil create a new instance of the underlying type and set dst to the pointer of that instance.
 			dst.Set(reflect.New(dst.Type().Elem()))
+		}
+
+		if srcAny, ok := src.Interface().(*anypb.Any); ok {
+			dstAny, ok := src.Interface().(*anypb.Any)
+			if !ok {
+				return errors.Errorf("dst type is %s, expected: %s ", dst.Type(), "*any.Any")
+			}
+
+			newSrcProto, err := srcAny.UnmarshalNew()
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			newSrc := reflect.ValueOf(newSrcProto)
+
+			newDstProto, err := dstAny.UnmarshalNew()
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			newDst := reflect.ValueOf(newDstProto)
+
+			if err := structToStruct(filter, &newSrc, &newDst, userOptions); err != nil {
+				return err
+			}
+
+			newSrcAny := new(anypb.Any)
+			if err := newSrcAny.MarshalFrom(newDst.Interface().(proto.Message)); err != nil {
+				return errors.WithStack(err)
+			}
+
+			dst.Set(reflect.ValueOf(newSrcAny))
+			break
 		}
 
 		srcElem, dstElem := src.Elem(), dst.Elem()
