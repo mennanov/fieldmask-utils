@@ -72,3 +72,8 @@ fieldmask_utils.StructToStruct(mask, request.User, userDst)
 3.  When copying from a struct to struct the destination struct must have the same fields (or a subset)
     as the source struct. Pointers must also be coherent: if a field is a pointer in the source struct, then
     it also must be a pointer (not a value field) in the destination struct.
+4. `oneof` fields are represented differently in `fieldmaskpb.FieldMask` compared to `fieldmask_util.Mask`. In 
+    [FieldMask](https://pkg.go.dev/google.golang.org/protobuf/types/known/fieldmaskpb#:~:text=%23%20Field%20Masks%20and%20Oneof%20Fields)
+    the fields are represented using their property name, in this library they are prefixed with the `oneof` name
+    matching how Go generated code is laid out. This can lead to issues when converting between the two, for example
+    when using `MaskFromPaths` or `MaskFromProtoFieldMask`.
