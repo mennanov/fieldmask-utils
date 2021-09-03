@@ -84,33 +84,36 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 		}
 
 		if srcAny, ok := src.Interface().(*anypb.Any); ok {
-			dstAny, ok := src.Interface().(*anypb.Any)
+			dstAny, ok := dst.Interface().(*anypb.Any)
 			if !ok {
 				return errors.Errorf("dst type is %s, expected: %s ", dst.Type(), "*any.Any")
 			}
 
-			newSrcProto, err := srcAny.UnmarshalNew()
+			srcProto, err := srcAny.UnmarshalNew()
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			newSrc := reflect.ValueOf(newSrcProto)
+			srcProtoValue := reflect.ValueOf(srcProto)
 
-			newDstProto, err := dstAny.UnmarshalNew()
+			if dstAny.GetTypeUrl() == "" {
+				dstAny.TypeUrl = srcAny.GetTypeUrl()
+			}
+			dstProto, err := dstAny.UnmarshalNew()
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			newDst := reflect.ValueOf(newDstProto)
+			dstProtoValue := reflect.ValueOf(dstProto)
 
-			if err := structToStruct(filter, &newSrc, &newDst, userOptions); err != nil {
+			if err := structToStruct(filter, &srcProtoValue, &dstProtoValue, userOptions); err != nil {
 				return err
 			}
 
-			newSrcAny := new(anypb.Any)
-			if err := newSrcAny.MarshalFrom(newDst.Interface().(proto.Message)); err != nil {
+			newDstAny := new(anypb.Any)
+			if err := newDstAny.MarshalFrom(dstProtoValue.Interface().(proto.Message)); err != nil {
 				return errors.WithStack(err)
 			}
 
-			dst.Set(reflect.ValueOf(newSrcAny))
+			dst.Set(reflect.ValueOf(newDstAny))
 			break
 		}
 

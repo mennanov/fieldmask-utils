@@ -129,7 +129,8 @@ func TestStructToStruct_Proto(t *testing.T) {
 func TestStructToStruct_ExistingAnyPreserved(t *testing.T) {
 	existingExtraUser := &testproto.User{
 		Id:       42,
-		Username: "username",
+		Username: "emily",
+		Role:     testproto.Role_REGULAR,
 	}
 	existingExtraUserAny, err := anypb.New(existingExtraUser)
 	require.NoError(t, err)
@@ -145,7 +146,8 @@ func TestStructToStruct_ExistingAnyPreserved(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, testUserFull.Id, extraUser.Id)
 	assert.Equal(t, testUserFull.Avatar.OriginalUrl, extraUser.Avatar.OriginalUrl)
-	assert.Equal(t, "username", extraUser.Username)
+	assert.Equal(t, existingExtraUser.Username, extraUser.Username)
+	assert.Equal(t, existingExtraUser.Role, extraUser.Role)
 }
 
 func TestStructToStruct_PartialProtoSuccess(t *testing.T) {
