@@ -47,6 +47,104 @@ func TestStructToStruct_PtrToInt(t *testing.T) {
 	}, dst)
 }
 
+func TestStructToStruct_StructToPointer(t *testing.T) {
+	v15 := 15
+	v42 := 42
+
+	type N struct {
+		Field1 int
+	}
+	type S struct {
+		Field1 N
+		Field2 int
+	}
+	src := &S{
+		Field1: N{
+			Field1: v15,
+		},
+		Field2: v42,
+	}
+	type SN struct {
+		Field1 *int
+	}
+	type D struct {
+		Field1 *SN
+		Field2 *int
+	}
+	dst := new(D)
+
+	mask := fieldmask_utils.MaskFromString("Field1,Field2")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, &D{
+		Field1: &SN{
+			Field1: &v15,
+		},
+		Field2: &v42,
+	}, dst)
+}
+
+func TestStructToStruct_IntToPointer(t *testing.T) {
+	v := 42
+
+	type S struct {
+		Field2 int
+	}
+	src := &S{
+		Field2: v,
+	}
+	type D struct {
+		Field2 *int
+	}
+	dst := new(D)
+
+	mask := fieldmask_utils.MaskFromString("Field2")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, &D{
+		Field2: &v,
+	}, dst)
+}
+
+func TestStructToStruct_PointerToInt(t *testing.T) {
+	v := 42
+
+	type S struct {
+		Field2 *int
+	}
+	src := &S{
+		Field2: &v,
+	}
+	type D struct {
+		Field2 int
+	}
+	dst := new(D)
+
+	mask := fieldmask_utils.MaskFromString("Field2")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	require.NoError(t, err)
+	assert.Equal(t, &D{
+		Field2: 42,
+	}, dst)
+}
+
+func TestStructToStruct_Incompatible(t *testing.T) {
+	type S struct {
+		Field2 int
+	}
+	src := &S{
+		Field2: 42,
+	}
+	type D struct {
+		Field2 string
+	}
+	dst := new(D)
+
+	mask := fieldmask_utils.MaskFromString("Field2")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	require.EqualError(t, err, "src kind int differs from dst kind string")
+}
+
 func TestStructToStruct_PtrToStruct_EmptyDst(t *testing.T) {
 	type A struct {
 		Field1 string
