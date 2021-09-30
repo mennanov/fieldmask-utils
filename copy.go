@@ -34,9 +34,24 @@ func StructToStruct(filter FieldFilter, src, dst interface{}, userOpts ...Option
 	return structToStruct(filter, &srcVal, &dstVal, opts)
 }
 
+func ensureCompatible(src, dst *reflect.Value) error {
+	srcKind := src.Kind()
+	if srcKind == reflect.Ptr {
+		srcKind = src.Type().Elem().Kind()
+	}
+	dstKind := dst.Kind()
+	if dstKind == reflect.Ptr {
+		dstKind = dst.Type().Elem().Kind()
+	}
+	if srcKind != dstKind {
+		return errors.Errorf("src kind %s differs from dst kind %s", srcKind, dstKind)
+	}
+	return nil
+}
+
 func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *options) error {
-	if src.Kind() != dst.Kind() {
-		return errors.Errorf("src kind %s differs from dst kind %s", src.Kind(), dst.Kind())
+	if err := ensureCompatible(src, dst); err != nil {
+		return err
 	}
 
 	switch src.Kind() {
@@ -44,6 +59,14 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 		if dst.CanSet() && dst.Type().AssignableTo(src.Type()) && filter.IsEmpty() {
 			dst.Set(*src)
 			return nil
+		}
+
+		if dst.Kind() == reflect.Ptr {
+			if dst.IsNil() {
+				dst.Set(reflect.New(dst.Type().Elem()))
+			}
+			v := dst.Elem()
+			dst = &v
 		}
 
 		for i := 0; i < src.NumField(); i++ {
@@ -78,7 +101,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 			dst.Set(reflect.Zero(dst.Type()))
 			break
 		}
-		if dst.IsNil() {
+		if dst.Kind() == reflect.Ptr && dst.IsNil() {
 			// If dst is nil create a new instance of the underlying type and set dst to the pointer of that instance.
 			dst.Set(reflect.New(dst.Type().Elem()))
 		}
@@ -117,7 +140,11 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 			break
 		}
 
-		srcElem, dstElem := src.Elem(), dst.Elem()
+		srcElem, dstElem := src.Elem(), *dst
+		if dst.Kind() == reflect.Ptr {
+			dstElem = dst.Elem()
+		}
+
 		if err := structToStruct(filter, &srcElem, &dstElem, userOptions); err != nil {
 			return err
 		}
@@ -185,7 +212,14 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 		if !dst.CanSet() {
 			return errors.Errorf("dst %s, %s is not settable", dst, dst.Type())
 		}
-		dst.Set(*src)
+		if dst.Kind() == reflect.Ptr {
+			if !src.CanAddr() {
+				return errors.Errorf("src %s, %s is not addressable", src, src.Type())
+			}
+			dst.Set(src.Addr())
+		} else {
+			dst.Set(*src)
+		}
 	}
 
 	return nil
