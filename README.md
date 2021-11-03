@@ -58,7 +58,7 @@ import fieldmask_utils "github.com/mennanov/fieldmask-utils"
 func main() {
 	var request UpdateUserRequest
 	userDst := make(map[string]interface{}) // a map to copy to
-	mask, _ := fieldmask_utils.MaskFromProtoFieldMask(request.FieldMask, strcase.ToCamel)
+	mask, _ := fieldmask_utils.MaskFromProtoFieldMask(request.FieldMask, naming)
 	err := fieldmask_utils.StructToMap(mask, request.User, userDst)
 	// Only the fields mentioned in the field mask will be copied to userDst, other fields are left intact
 }
