@@ -1,6 +1,7 @@
 package fieldmask_utils
 
 import (
+	"math"
 	"reflect"
 	"strings"
 
@@ -171,6 +172,10 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 	case reflect.Slice:
 		dstLen := dst.Len()
 		srcLen := src.Len()
+
+		if srcLen > userOptions.MaxCopyListSize {
+			srcLen = userOptions.MaxCopyListSize
+		}
 		for i := 0; i < srcLen; i++ {
 			srcItem := src.Index(i)
 			var dstItem reflect.Value
@@ -197,10 +202,14 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 	case reflect.Array:
 		dstLen := dst.Len()
-		if dstLen < src.Len() {
-			return errors.Errorf("dst array size %d is less than src size %d", dstLen, src.Len())
+		srcLen := src.Len()
+		if dstLen < srcLen {
+			return errors.Errorf("dst array size %d is less than src size %d", dstLen, srcLen)
 		}
-		for i := 0; i < src.Len(); i++ {
+		if srcLen > userOptions.MaxCopyListSize {
+			srcLen = userOptions.MaxCopyListSize
+		}
+		for i := 0; i < srcLen; i++ {
 			srcItem := src.Index(i)
 			dstItem := dst.Index(i)
 			if err := structToStruct(filter, &srcItem, &dstItem, userOptions); err != nil {
@@ -228,6 +237,9 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 // options are used in StructToStruct and StructToMap functions to modify the copying behavior.
 type options struct {
 	DstTag string
+
+	// Controls the maximum number of elements in the array/slice that can be copied, if set negative number means can copy all element.
+	MaxCopyListSize int
 }
 
 // Option function modifies the given options.
@@ -240,8 +252,19 @@ func WithTag(s string) Option {
 	}
 }
 
+// WithMaxCopyListSize sets the max size which can be copied.
+func WithMaxCopyListSize(size int) Option {
+	return func(o *options) {
+		if size < 0 {
+			o.MaxCopyListSize = math.MaxInt64
+		} else {
+			o.MaxCopyListSize = size
+		}
+	}
+}
+
 func newDefaultOptions() *options {
-	return &options{}
+	return &options{MaxCopyListSize: math.MaxInt64}
 }
 
 func dstKey(tag string, f reflect.StructField) string {
@@ -307,10 +330,18 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			itemKind := srcField.Type().Elem().Kind()
 			if itemKind != reflect.Ptr && itemKind != reflect.Struct && itemKind != reflect.Interface {
 				// Handle this array/slice as a regular non-nested data structure: copy it entirely to dst.
-				dst[dstName] = srcField.Interface()
+				if srcField.Len() < opts.MaxCopyListSize {
+					dst[dstName] = srcField.Interface()
+				} else {
+					// copy MaxCopyListSize items to dst
+					dst[dstName] = srcField.Slice(0, opts.MaxCopyListSize).Interface()
+				}
 				continue
 			}
 			srcLen := srcField.Len()
+			if srcLen > opts.MaxCopyListSize {
+				srcLen = opts.MaxCopyListSize
+			}
 			var newValue []map[string]interface{}
 			existingValue, ok := dst[dstName]
 			if ok {
