@@ -1538,3 +1538,167 @@ func TestStructToMap_EmptySliceSrc_NonEmptyArrayDst(t *testing.T) {
 		"Field1": src.Field1,
 	}, dst)
 }
+
+func TestStructToStruct_CopyStructSlice_WithMaxCopyListSize(t *testing.T) {
+	type AA struct {
+		Field int
+	}
+	type A struct {
+		Field1 []AA
+	}
+
+	src := &A{
+		Field1: []AA{{1}, {2}, {3}},
+	}
+	dst := &A{}
+
+	const copySize int = 2
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithMaxCopyListSize(copySize))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: src.Field1[:copySize],
+	}, dst)
+}
+
+func TestStructToStruct_CopyIntSlice_WithMaxCopyListSize(t *testing.T) {
+	type A struct {
+		Field1 []int
+	}
+
+	src := &A{
+		Field1: []int{1, 2, 3},
+	}
+
+	const copySize int = 2
+	dst := &A{}
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithMaxCopyListSize(copySize))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: src.Field1[:copySize],
+	}, dst)
+}
+
+func TestStructToStruct_CopyIntArray_WithMaxCopyListSize(t *testing.T) {
+	const arraySize int = 3
+	type A struct {
+		Field1 [arraySize]int
+	}
+	src := &A{
+		Field1: [arraySize]int{1, 2, 3},
+	}
+	const copySize int = arraySize - 1
+	dst := &A{}
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithMaxCopyListSize(copySize))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: [3]int{1, 2},
+	}, dst)
+}
+
+func TestStructToStruct_CopyStructArray_WithMaxCopyListSize(t *testing.T) {
+	const arraySize int = 3
+	type AA struct {
+		Field int
+	}
+	type A struct {
+		Field1 [3]AA
+	}
+
+	src := &A{
+		Field1: [3]AA{{1}, {2}, {3}},
+	}
+	dst := &A{}
+
+	const copySize int = arraySize - 1
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithMaxCopyListSize(copySize))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: [3]AA{{1}, {2}},
+	}, dst)
+}
+
+func TestStructToMap_CopyStructSlice_WithMaxCopyListSize(t *testing.T) {
+	type AA struct {
+		Field int
+	}
+	type A struct {
+		Field1 []AA
+	}
+
+	src := &A{
+		Field1: []AA{{1}, {2}, {3}},
+	}
+	dst := map[string]interface{}{}
+
+	const copySize int = 2
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMaxCopyListSize(copySize))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": []map[string]interface{}{{"Field": 1}, {"Field": 2}},
+	}, dst)
+}
+
+func TestStructToMap_CopyIntSlice_WithMaxCopyListSize(t *testing.T) {
+	type A struct {
+		Field1 []int
+	}
+
+	src := &A{
+		Field1: []int{1, 2, 3},
+	}
+	dst := map[string]interface{}{}
+
+	const copySize int = 2
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMaxCopyListSize(copySize))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": []int{1, 2},
+	}, dst)
+}
+
+func TestStructToMap_CopyStructArray_WithMaxCopyListSize(t *testing.T) {
+	const arraySize int = 3
+	type AA struct {
+		Field int
+	}
+	type A struct {
+		Field1 [3]AA
+	}
+
+	src := &A{
+		Field1: [3]AA{{1}, {2}, {3}},
+	}
+	dst := map[string]interface{}{}
+
+	const copySize int = arraySize - 1
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMaxCopyListSize(copySize))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": []map[string]interface{}{{"Field": 1}, {"Field": 2}},
+	}, dst)
+}
+
+func TestStructToMap_CopyIntArray_WithMaxCopyListSize(t *testing.T) {
+	const arraySize int = 3
+	type A struct {
+		Field1 [arraySize]int
+	}
+	src := &A{
+		Field1: [arraySize]int{1, 2, 3},
+	}
+	const copySize int = arraySize - 1
+	dst := map[string]interface{}{}
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMaxCopyListSize(copySize))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": src.Field1[:copySize],
+	}, dst)
+}
