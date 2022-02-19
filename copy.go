@@ -1,7 +1,6 @@
 package fieldmask_utils
 
 import (
-	"math"
 	"reflect"
 	"strings"
 
@@ -171,11 +170,8 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 	case reflect.Slice:
 		dstLen := dst.Len()
-		srcLen := src.Len()
+		srcLen := userOptions.CopyListSize(src, dst)
 
-		if srcLen > userOptions.MaxCopyListSize {
-			srcLen = userOptions.MaxCopyListSize
-		}
 		for i := 0; i < srcLen; i++ {
 			srcItem := src.Index(i)
 			var dstItem reflect.Value
@@ -202,12 +198,9 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 	case reflect.Array:
 		dstLen := dst.Len()
-		srcLen := src.Len()
+		srcLen := userOptions.CopyListSize(src, dst)
 		if dstLen < srcLen {
 			return errors.Errorf("dst array size %d is less than src size %d", dstLen, srcLen)
-		}
-		if srcLen > userOptions.MaxCopyListSize {
-			srcLen = userOptions.MaxCopyListSize
 		}
 		for i := 0; i < srcLen; i++ {
 			srcItem := src.Index(i)
@@ -238,8 +231,8 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 type options struct {
 	DstTag string
 
-	// Controls the maximum number of elements in the array/slice that can be copied, if set negative number means can copy all element.
-	MaxCopyListSize int
+	// CopyListSize can control the number of elements copied from src to dst depending on src/dst
+	CopyListSize func(src, dst *reflect.Value) int
 }
 
 // Option function modifies the given options.
@@ -252,19 +245,16 @@ func WithTag(s string) Option {
 	}
 }
 
-// WithMaxCopyListSize sets the max size which can be copied.
-func WithMaxCopyListSize(size int) Option {
+// WithCopyListSize sets CopyListSize func you can set copy size according to src / dst.
+func WithCopyListSize(f func(src, dst *reflect.Value) int) Option {
 	return func(o *options) {
-		if size < 0 {
-			o.MaxCopyListSize = math.MaxInt64
-		} else {
-			o.MaxCopyListSize = size
-		}
+		o.CopyListSize = f
 	}
 }
 
 func newDefaultOptions() *options {
-	return &options{MaxCopyListSize: math.MaxInt64}
+	// set default CopyListSize is func which return src.Len()
+	return &options{CopyListSize: func(src, dst *reflect.Value) int { return src.Len() }}
 }
 
 func dstKey(tag string, f reflect.StructField) string {
@@ -332,19 +322,15 @@ func structToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 		case reflect.Array, reflect.Slice:
 			// Check if it is a slice of primitive values.
 			itemKind := srcField.Type().Elem().Kind()
+			srcLen := userOptions.CopyListSize(&srcField, nil)
 			if itemKind != reflect.Ptr && itemKind != reflect.Struct && itemKind != reflect.Interface {
 				// Handle this array/slice as a regular non-nested data structure: copy it entirely to dst.
-				if srcField.Len() < userOptions.MaxCopyListSize {
-					dst[dstName] = srcField.Interface()
+				if srcLen < srcField.Len() {
+					dst[dstName] = srcField.Slice(0, srcLen).Interface()
 				} else {
-					// copy MaxCopyListSize items to dst
-					dst[dstName] = srcField.Slice(0, userOptions.MaxCopyListSize).Interface()
+					dst[dstName] = srcField.Interface()
 				}
 				continue
-			}
-			srcLen := srcField.Len()
-			if srcLen > userOptions.MaxCopyListSize {
-				srcLen = userOptions.MaxCopyListSize
 			}
 			var newValue []map[string]interface{}
 			existingValue, ok := dst[dstName]
