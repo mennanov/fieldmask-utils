@@ -170,7 +170,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 	case reflect.Slice:
 		dstLen := dst.Len()
-		srcLen := userOptions.CopyListSize(src, dst)
+		srcLen := userOptions.CopyListSize(src)
 
 		for i := 0; i < srcLen; i++ {
 			srcItem := src.Index(i)
@@ -198,7 +198,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 	case reflect.Array:
 		dstLen := dst.Len()
-		srcLen := userOptions.CopyListSize(src, dst)
+		srcLen := userOptions.CopyListSize(src)
 		if dstLen < srcLen {
 			return errors.Errorf("dst array size %d is less than src size %d", dstLen, srcLen)
 		}
@@ -231,8 +231,8 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 type options struct {
 	DstTag string
 
-	// CopyListSize can control the number of elements copied from src to dst depending on src/dst
-	CopyListSize func(src, dst *reflect.Value) int
+	// CopyListSize can control the number of elements copied from src depending on src's Value
+	CopyListSize func(src *reflect.Value) int
 }
 
 // Option function modifies the given options.
@@ -245,8 +245,8 @@ func WithTag(s string) Option {
 	}
 }
 
-// WithCopyListSize sets CopyListSize func you can set copy size according to src / dst.
-func WithCopyListSize(f func(src, dst *reflect.Value) int) Option {
+// WithCopyListSize sets CopyListSize func you can set copy size according to src.
+func WithCopyListSize(f func(src *reflect.Value) int) Option {
 	return func(o *options) {
 		o.CopyListSize = f
 	}
@@ -254,7 +254,7 @@ func WithCopyListSize(f func(src, dst *reflect.Value) int) Option {
 
 func newDefaultOptions() *options {
 	// set default CopyListSize is func which return src.Len()
-	return &options{CopyListSize: func(src, dst *reflect.Value) int { return src.Len() }}
+	return &options{CopyListSize: func(src *reflect.Value) int { return src.Len() }}
 }
 
 func dstKey(tag string, f reflect.StructField) string {
@@ -322,7 +322,7 @@ func structToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 		case reflect.Array, reflect.Slice:
 			// Check if it is a slice of primitive values.
 			itemKind := srcField.Type().Elem().Kind()
-			srcLen := userOptions.CopyListSize(&srcField, nil)
+			srcLen := userOptions.CopyListSize(&srcField)
 			if itemKind != reflect.Ptr && itemKind != reflect.Struct && itemKind != reflect.Interface {
 				// Handle this array/slice as a regular non-nested data structure: copy it entirely to dst.
 				if srcLen < srcField.Len() {
