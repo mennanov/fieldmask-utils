@@ -170,7 +170,8 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 	case reflect.Slice:
 		dstLen := dst.Len()
-		srcLen := src.Len()
+		srcLen := userOptions.CopyListSize(src)
+
 		for i := 0; i < srcLen; i++ {
 			srcItem := src.Index(i)
 			var dstItem reflect.Value
@@ -197,10 +198,11 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 	case reflect.Array:
 		dstLen := dst.Len()
-		if dstLen < src.Len() {
-			return errors.Errorf("dst array size %d is less than src size %d", dstLen, src.Len())
+		srcLen := userOptions.CopyListSize(src)
+		if dstLen < srcLen {
+			return errors.Errorf("dst array size %d is less than src size %d", dstLen, srcLen)
 		}
-		for i := 0; i < src.Len(); i++ {
+		for i := 0; i < srcLen; i++ {
 			srcItem := src.Index(i)
 			dstItem := dst.Index(i)
 			if err := structToStruct(filter, &srcItem, &dstItem, userOptions); err != nil {
@@ -228,6 +230,9 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 // options are used in StructToStruct and StructToMap functions to modify the copying behavior.
 type options struct {
 	DstTag string
+
+	// CopyListSize can control the number of elements copied from src depending on src's Value
+	CopyListSize func(src *reflect.Value) int
 }
 
 // Option function modifies the given options.
@@ -240,8 +245,16 @@ func WithTag(s string) Option {
 	}
 }
 
+// WithCopyListSize sets CopyListSize func you can set copy size according to src.
+func WithCopyListSize(f func(src *reflect.Value) int) Option {
+	return func(o *options) {
+		o.CopyListSize = f
+	}
+}
+
 func newDefaultOptions() *options {
-	return &options{}
+	// set default CopyListSize is func which return src.Len()
+	return &options{CopyListSize: func(src *reflect.Value) int { return src.Len() }}
 }
 
 func dstKey(tag string, f reflect.StructField) string {
@@ -267,6 +280,10 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 	for _, o := range userOpts {
 		o(opts)
 	}
+	return structToMap(filter, src, dst, opts)
+}
+
+func structToMap(filter FieldFilter, src interface{}, dst map[string]interface{}, userOptions *options) error {
 	srcVal := indirect(reflect.ValueOf(src))
 	srcType := srcVal.Type()
 	for i := 0; i < srcVal.NumField(); i++ {
@@ -281,7 +298,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			continue
 		}
 
-		dstName := dstKey(opts.DstTag, srcType.Field(i))
+		dstName := dstKey(userOptions.DstTag, srcType.Field(i))
 
 		switch srcField.Kind() {
 		case reflect.Ptr, reflect.Interface:
@@ -297,7 +314,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			} else {
 				newValue = make(map[string]interface{})
 			}
-			if err := StructToMap(subFilter, srcField.Interface(), newValue, userOpts...); err != nil {
+			if err := structToMap(subFilter, srcField.Interface(), newValue, userOptions); err != nil {
 				return err
 			}
 			dst[dstName] = newValue
@@ -305,12 +322,16 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 		case reflect.Array, reflect.Slice:
 			// Check if it is a slice of primitive values.
 			itemKind := srcField.Type().Elem().Kind()
+			srcLen := userOptions.CopyListSize(&srcField)
 			if itemKind != reflect.Ptr && itemKind != reflect.Struct && itemKind != reflect.Interface {
 				// Handle this array/slice as a regular non-nested data structure: copy it entirely to dst.
-				dst[dstName] = srcField.Interface()
+				if srcLen < srcField.Len() {
+					dst[dstName] = srcField.Slice(0, srcLen).Interface()
+				} else {
+					dst[dstName] = srcField.Interface()
+				}
 				continue
 			}
-			srcLen := srcField.Len()
 			var newValue []map[string]interface{}
 			existingValue, ok := dst[dstName]
 			if ok {
@@ -344,7 +365,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			}
 			for i := 0; i < srcLen; i++ {
 				subValue := srcField.Index(i)
-				if err := StructToMap(subFilter, subValue.Interface(), newValue[i], userOpts...); err != nil {
+				if err := structToMap(subFilter, subValue.Interface(), newValue[i], userOptions); err != nil {
 					return err
 				}
 			}
@@ -360,7 +381,7 @@ func StructToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 			} else {
 				newValue = make(map[string]interface{})
 			}
-			if err := StructToMap(subFilter, srcField.Interface(), newValue, userOpts...); err != nil {
+			if err := structToMap(subFilter, srcField.Interface(), newValue, userOptions); err != nil {
 				return err
 			}
 			dst[dstName] = newValue

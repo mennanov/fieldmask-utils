@@ -2,6 +2,7 @@ package fieldmask_utils_test
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1536,5 +1537,434 @@ func TestStructToMap_EmptySliceSrc_NonEmptyArrayDst(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{
 		"Field1": src.Field1,
+	}, dst)
+}
+
+func TestStructToStruct_CopyStructSlice_WithMaxCopyListSize(t *testing.T) {
+	type AA struct {
+		Field int
+	}
+	type A struct {
+		Field1 []AA
+	}
+
+	src := &A{
+		Field1: []AA{{1}, {2}, {3}},
+	}
+	dst := &A{}
+
+	const copySize int = 2
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		return copySize
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: src.Field1[:copySize],
+	}, dst)
+}
+
+func TestStructToStruct_CopyIntSlice_WithMaxCopyListSize(t *testing.T) {
+	type A struct {
+		Field1 []int
+	}
+
+	src := &A{
+		Field1: []int{1, 2, 3},
+	}
+
+	const copySize int = 2
+	dst := &A{}
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		return copySize
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: src.Field1[:copySize],
+	}, dst)
+}
+
+func TestStructToStruct_CopyIntArray_WithMaxCopyListSize(t *testing.T) {
+	const arraySize int = 3
+	type A struct {
+		Field1 [arraySize]int
+	}
+	src := &A{
+		Field1: [arraySize]int{1, 2, 3},
+	}
+	const copySize int = arraySize - 1
+	dst := &A{}
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		return copySize
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: [3]int{1, 2},
+	}, dst)
+}
+
+func TestStructToStruct_CopyStructArray_WithMaxCopyListSize(t *testing.T) {
+	const arraySize int = 3
+	type AA struct {
+		Field int
+	}
+	type A struct {
+		Field1 [3]AA
+	}
+
+	src := &A{
+		Field1: [3]AA{{1}, {2}, {3}},
+	}
+	dst := &A{}
+
+	const copySize int = arraySize - 1
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		return copySize
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: [3]AA{{1}, {2}},
+	}, dst)
+}
+
+func TestStructToMap_CopyStructSlice_WithMaxCopyListSize(t *testing.T) {
+	type AA struct {
+		Field int
+	}
+	type A struct {
+		Field1 []AA
+	}
+
+	src := &A{
+		Field1: []AA{{1}, {2}, {3}},
+	}
+	dst := map[string]interface{}{}
+
+	const copySize int = 2
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		return copySize
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": []map[string]interface{}{{"Field": 1}, {"Field": 2}},
+	}, dst)
+}
+
+func TestStructToMap_CopyIntSlice_WithMaxCopyListSize(t *testing.T) {
+	type A struct {
+		Field1 []int
+	}
+
+	src := &A{
+		Field1: []int{1, 2, 3},
+	}
+	dst := map[string]interface{}{}
+
+	const copySize int = 2
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		return copySize
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": []int{1, 2},
+	}, dst)
+}
+
+func TestStructToMap_CopyStructArray_WithMaxCopyListSize(t *testing.T) {
+	const arraySize int = 3
+	type AA struct {
+		Field int
+	}
+	type A struct {
+		Field1 [3]AA
+	}
+
+	src := &A{
+		Field1: [3]AA{{1}, {2}, {3}},
+	}
+	dst := map[string]interface{}{}
+
+	const copySize int = arraySize - 1
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		return copySize
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": []map[string]interface{}{{"Field": 1}, {"Field": 2}},
+	}, dst)
+}
+
+func TestStructToMap_CopyIntArray_WithMaxCopyListSize(t *testing.T) {
+	const arraySize int = 3
+	type A struct {
+		Field1 [arraySize]int
+	}
+	src := &A{
+		Field1: [arraySize]int{1, 2, 3},
+	}
+	const copySize int = arraySize - 1
+	dst := map[string]interface{}{}
+	mask := fieldmask_utils.MaskFromString("Field1")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		return copySize
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": src.Field1[:copySize],
+	}, dst)
+}
+
+func TestStructToStruct_CopySlice_WithDiffentItemKind(t *testing.T) {
+	type A struct {
+		Field1 []int
+		Field2 []string
+	}
+	src := &A{
+		Field1: []int{1, 2, 3},
+		Field2: []string{"1", "2", "3"},
+	}
+	dst := &A{}
+	const copySize int = 1
+	mask := fieldmask_utils.MaskFromString("Field1,Field2")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		if itemKind := src.Type().Elem().Kind(); itemKind == reflect.Int {
+			return copySize
+		} else {
+			return src.Len()
+		}
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: []int{1},
+		Field2: []string{"1", "2", "3"},
+	}, dst)
+}
+
+func TestStructToMap_CopySlice_WithDiffentItemKind(t *testing.T) {
+	type A struct {
+		Field1 []int
+		Field2 []string
+	}
+	src := &A{
+		Field1: []int{1, 2, 3},
+		Field2: []string{"1", "2", "3"},
+	}
+	dst := map[string]interface{}{}
+	const copySize int = 1
+	mask := fieldmask_utils.MaskFromString("Field1,Field2")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		if itemKind := src.Type().Elem().Kind(); itemKind == reflect.Int {
+			return copySize
+		} else {
+			return src.Len()
+		}
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": []int{1},
+		"Field2": []string{"1", "2", "3"},
+	}, dst)
+}
+
+func TestStructToStruct_CopySlice_WithDiffentItemType(t *testing.T) {
+	type AA struct {
+		Int int
+	}
+	type A struct {
+		Field1 []int
+		Field2 []AA
+	}
+	src := &A{
+		Field1: []int{1, 2, 3},
+		Field2: []AA{{1}, {2}, {3}},
+	}
+	dst := &A{}
+	const copySize int = 1
+	mask := fieldmask_utils.MaskFromString("Field1,Field2")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		if itemType := src.Type().Elem().Name(); itemType == "AA" {
+			return copySize
+		} else {
+			return src.Len()
+		}
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: []int{1, 2, 3},
+		Field2: []AA{{1}},
+	}, dst)
+}
+
+func TestStructToMap_CopySlice_WithDiffentItemType(t *testing.T) {
+	type AA struct {
+		Int int
+	}
+	type A struct {
+		Field1 []int
+		Field2 []AA
+	}
+	src := &A{
+		Field1: []int{1, 2, 3},
+		Field2: []AA{{1}, {2}, {3}},
+	}
+	dst := map[string]interface{}{}
+	const copySize int = 1
+	mask := fieldmask_utils.MaskFromString("Field1,Field2")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
+		if itemType := src.Type().Elem().Name(); itemType == "AA" {
+			return copySize
+		} else {
+			return src.Len()
+		}
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": []int{1, 2, 3},
+		"Field2": []map[string]interface{}{{"Int": 1}},
+	}, dst)
+}
+
+func TestStructToStruct_WithNonStructSrcError(t *testing.T) {
+	type A struct{ Field int }
+	var src = 1
+	var dst = &A{}
+	mask := fieldmask_utils.MaskFromString("Field")
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	require.Error(t, err)
+}
+
+func TestStructToStruct_WithMultiTagComma(t *testing.T) {
+	type A struct {
+		Field int `json:"field,omitempty"`
+	}
+	var src = A{Field: 1}
+	var dst = map[string]interface{}{}
+	mask := fieldmask_utils.MaskFromString("Field")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithTag("json"))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"field": 1,
+	}, dst)
+}
+
+func TestStructToMap_DiffentTypeWithSameDstKey(t *testing.T) {
+	type BB struct {
+		Field int
+	}
+	type A1 struct {
+		FieldA []int
+		FieldB []BB `json:"FieldA"`
+	}
+	var src1 = A1{FieldA: []int{1, 2}, FieldB: []BB{{1}, {2}}}
+	var dst1 = map[string]interface{}{}
+	mask := fieldmask_utils.MaskFromString("FieldA,FieldB")
+	err := fieldmask_utils.StructToMap(mask, src1, dst1, fieldmask_utils.WithTag("json"))
+	require.Error(t, err)
+
+	type A2 struct {
+		FieldA [2]int
+		FieldB [2]BB `json:"FieldA"`
+	}
+	var src2 = A2{FieldA: [2]int{1, 2}, FieldB: [2]BB{{1}, {2}}}
+	var dst2 = map[string]interface{}{}
+	mask = fieldmask_utils.MaskFromString("FieldA,FieldB")
+	err = fieldmask_utils.StructToMap(mask, src2, dst2, fieldmask_utils.WithTag("json"))
+	require.Error(t, err)
+}
+
+func TestStructToStruct_CopySlice_WithDiffentAddr_WithDifferentFieldName(t *testing.T) {
+	type A struct {
+		Field1 []int
+		Field2 []int
+	}
+
+	var src = &A{
+		Field1: []int{1, 2, 3},
+		Field2: []int{1, 2, 3},
+	}
+	var field1 = reflect.ValueOf(src).Elem().FieldByName("Field1")
+	var dst = &A{}
+	var mask = fieldmask_utils.MaskFromString("Field1,Field2")
+	var err = fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithCopyListSize(
+		func(src *reflect.Value) int {
+			if src.Pointer() == (&field1).Pointer() {
+				return 2
+			} else {
+				return src.Len()
+			}
+		},
+	))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: []int{1, 2},
+		Field2: []int{1, 2, 3},
+	}, dst)
+
+}
+
+func TestStructToStruct_CopySlice_WithSameAddr_WithDifferentFieldName(t *testing.T) {
+	t.Skip("Not Address this problem")
+	type A struct {
+		Field1 []int
+		Field2 []int
+	}
+
+	var arr = []int{1, 2, 3}
+
+	var src = &A{
+		Field1: arr,
+		Field2: arr,
+	}
+	var field1 = reflect.ValueOf(src).Elem().FieldByName("Field1")
+	var dst = &A{}
+	var mask = fieldmask_utils.MaskFromString("Field1,Field2")
+	var err = fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithCopyListSize(
+		func(src *reflect.Value) int {
+			if src.Pointer() == (&field1).Pointer() {
+				return 2
+			} else {
+				return src.Len()
+			}
+		},
+	))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: []int{1, 2},
+		Field2: []int{1, 2, 3},
+	}, dst)
+}
+
+func TestStructToStruct_CopyArraySizeAccordingFieldName(t *testing.T) {
+	type A struct {
+		Field1 [3]int
+		Field2 [3]int
+	}
+
+	var src = &A{
+		Field1: [3]int{1, 2, 3},
+		Field2: [3]int{1, 2, 3},
+	}
+	var field1 = reflect.ValueOf(src).Elem().FieldByName("Field1")
+	var dst = &A{}
+	var mask = fieldmask_utils.MaskFromString("Field1,Field2")
+	var err = fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithCopyListSize(
+		func(src *reflect.Value) int {
+			if src.Addr() == (&field1).Addr() {
+				return 2
+			} else {
+				return src.Len()
+			}
+		},
+	))
+	require.NoError(t, err)
+	assert.Equal(t, &A{
+		Field1: [3]int{1, 2},
+		Field2: [3]int{1, 2, 3},
 	}, dst)
 }
