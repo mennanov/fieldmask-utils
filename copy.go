@@ -169,6 +169,12 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 		}
 
 	case reflect.Slice:
+		if src.IsNil() {
+			// If the source slice is nil the dst slice is set to nil too.
+			dst.Set(*src)
+			break
+		}
+
 		dstLen := dst.Len()
 		srcLen := userOptions.CopyListSize(src)
 
