@@ -1,3 +1,4 @@
+// Package fieldmask_utils provides utility functions for copying data from structs using a field mask.
 package fieldmask_utils
 
 import (
