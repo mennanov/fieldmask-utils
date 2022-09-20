@@ -74,5 +74,6 @@ steps:
   - name: lint
     image: golang:1.17
     commands:
-      - go get -u github.com/mgechev/revive
+      - go get -d github.com/mgechev/revive
+      - go install github.com/mgechev/revive
       - revive -formatter=friendly -config=revive.toml ./...
