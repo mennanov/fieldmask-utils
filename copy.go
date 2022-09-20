@@ -240,7 +240,18 @@ type options struct {
 
 	// CopyListSize can control the number of elements copied from src depending on src's Value
 	CopyListSize func(src *reflect.Value) int
+
+	// MapVisitor is called for every filtered field in structToMap.
+	//
+	// It is called before copying the data from source to destination allowing custom processing.
+	// If the visitor function returns true the visited field is skipped.
+	MapVisitor mapVisitor
 }
+
+// mapVisitor is called for every filtered field in structToMap.
+type mapVisitor func(
+	filter FieldFilter, src interface{}, dst map[string]interface{},
+	srcFieldName, dstFieldName string, srcFieldValue reflect.Value) (skipToNext bool)
 
 // Option function modifies the given options.
 type Option func(*options)
@@ -256,6 +267,13 @@ func WithTag(s string) Option {
 func WithCopyListSize(f func(src *reflect.Value) int) Option {
 	return func(o *options) {
 		o.CopyListSize = f
+	}
+}
+
+// WithMapVisitor sets the fields visitor function for StructToMap.
+func WithMapVisitor(visitor mapVisitor) Option {
+	return func(o *options) {
+		o.MapVisitor = visitor
 	}
 }
 
@@ -306,6 +324,9 @@ func structToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 		}
 
 		dstName := dstKey(userOptions.DstTag, srcType.Field(i))
+		if userOptions.MapVisitor != nil && userOptions.MapVisitor(filter, src, dst, fieldName, dstName, srcField) {
+			continue
+		}
 
 		switch srcField.Kind() {
 		case reflect.Ptr, reflect.Interface:
