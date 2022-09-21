@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1788,6 +1789,72 @@ func TestStructToMap_CopyIntArray_WithMaxCopyListSize(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"Field1": src.Field1[:copySize],
 	}, dst)
+}
+
+func TestStructToMap_CopyStructWithPrivateFields_WithMapVisitor(t *testing.T) {
+	type A struct {
+		Time  time.Time
+		Other int
+	}
+	unixTime := time.Unix(10, 10)
+	src := &A{Time: unixTime}
+	dst := map[string]interface{}{}
+	mask := fieldmask_utils.MaskFromString("Time")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMapVisitor(
+		func(_ fieldmask_utils.FieldFilter, _ interface{}, dst map[string]interface{},
+			srcFieldName, dstFieldName string, srcFieldValue reflect.Value) (skipToNext bool) {
+			if srcFieldName == "Time" {
+				dst[dstFieldName] = srcFieldValue.Interface()
+				skipToNext = true
+			}
+			return
+		}))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Time": unixTime,
+	}, dst)
+}
+
+func TestStructToMap_MapVisitorVisitsOnlyFilteredFields(t *testing.T) {
+	type A struct {
+		Field1 int
+		Field2 string
+		Field3 int
+	}
+	src := &A{Field1: 42, Field2: "hello", Field3: 44}
+	dst := map[string]interface{}{}
+	mask := fieldmask_utils.MaskFromString("Field1, Field2")
+	var visitedFields []string
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMapVisitor(
+		func(_ fieldmask_utils.FieldFilter, _ interface{}, _ map[string]interface{},
+			srcFieldName, _ string, _ reflect.Value) (skipToNext bool) {
+			visitedFields = append(visitedFields, srcFieldName)
+			return
+		}))
+	require.NoError(t, err)
+	assert.Equal(t, visitedFields, []string{"Field1", "Field2"})
+}
+
+func TestStructToMap_WithMapVisitor_SkipsToNextField(t *testing.T) {
+	type A struct {
+		Field1 int
+		Field2 string
+		Field3 int
+	}
+	src := &A{Field1: 42, Field2: "hello", Field3: 44}
+	dst := map[string]interface{}{}
+	mask := fieldmask_utils.MaskFromString("Field1, Field2")
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMapVisitor(
+		func(_ fieldmask_utils.FieldFilter, _ interface{}, _ map[string]interface{},
+			srcFieldName, dstFieldName string, _ reflect.Value) (skipToNext bool) {
+			if srcFieldName == "Field1" {
+				dst[dstFieldName] = 33
+				skipToNext = true
+			}
+			return
+		}))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{"Field1": 33, "Field2": "hello"}, dst)
 }
 
 func TestStructToStruct_CopySlice_WithDiffentItemKind(t *testing.T) {
