@@ -1,10 +1,10 @@
 kind: pipeline
-name: go1.17
+name: go1.19
 type: docker
 
 steps:
   - name: test
-    image: golang:1.17
+    image: golang:1.19
     commands:
       - go vet ./...
       - go test -v -coverprofile=coverage.txt -covermode=atomic ./...
@@ -16,6 +16,30 @@ steps:
         from_secret: codecov-token
       files:
         - coverage.txt
+
+---
+kind: pipeline
+name: go1.18
+type: docker
+
+steps:
+  - name: test
+    image: golang:1.18
+    commands:
+      - go vet ./...
+      - go test ./...
+
+---
+kind: pipeline
+name: go1.17
+type: docker
+
+steps:
+  - name: test
+    image: golang:1.17
+    commands:
+      - go vet ./...
+      - go test ./...
 
 ---
 kind: pipeline
@@ -72,7 +96,7 @@ type: docker
 
 steps:
   - name: lint
-    image: golang:1.17
+    image: golang:1.19
     commands:
       - go get -d github.com/mgechev/revive
       - go install github.com/mgechev/revive
