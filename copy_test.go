@@ -1991,6 +1991,29 @@ func TestStructToStruct_WithMultiTagComma(t *testing.T) {
 	}, dst)
 }
 
+func TestStructToMap_WithInterface(t *testing.T) {
+	type user struct {
+		Nickname string      `json:"nickname"`
+		Private  interface{} `json:"private"`
+	}
+	mask := fieldmask_utils.MaskFromString("Nickname,Private")
+
+	src := &user{
+		Nickname: "nick",
+		Private:  []int{1, 2, 3, 4},
+		//Private:  map[string]interface{}{"age": 18},
+	}
+	dst := make(map[string]interface{})
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithTag(`json`))
+	assert.Nil(t, err)
+
+	expected := map[string]interface{}{
+		"nickname": "nick",
+		"private":  []int{1, 2, 3, 4},
+	}
+	assert.Equal(t, expected, dst)
+}
+
 func TestStructToMap_DifferentTypeWithSameDstKey(t *testing.T) {
 	type BB struct {
 		Field int
