@@ -1,6 +1,7 @@
 package fieldmask_utils_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
@@ -1990,7 +1991,7 @@ func TestStructToStruct_WithMultiTagComma(t *testing.T) {
 	}, dst)
 }
 
-func TestStructToMap_DiffentTypeWithSameDstKey(t *testing.T) {
+func TestStructToMap_DifferentTypeWithSameDstKey(t *testing.T) {
 	type BB struct {
 		Field int
 	}
@@ -2013,6 +2014,40 @@ func TestStructToMap_DiffentTypeWithSameDstKey(t *testing.T) {
 	mask = fieldmask_utils.MaskFromString("FieldA,FieldB")
 	err = fieldmask_utils.StructToMap(mask, src2, dst2, fieldmask_utils.WithTag("json"))
 	require.Error(t, err)
+}
+
+func TestStructToMap_EmptySrcSlice_JsonEncode(t *testing.T) {
+	type A struct{}
+	type B struct {
+		As []*A
+	}
+
+	src := &B{[]*A{}}
+	dst := make(map[string]interface{})
+
+	mask := fieldmask_utils.MaskFromString("As")
+	err := fieldmask_utils.StructToMap(mask, src, dst)
+	require.NoError(t, err)
+
+	jsonStr, _ := json.Marshal(dst)
+	assert.Equal(t, string(jsonStr), "{\"As\":[]}")
+}
+
+func TestStructToMap_NilSrcSlice_JsonEncode(t *testing.T) {
+	type A struct{}
+	type B struct {
+		As []*A
+	}
+
+	src := &B{}
+	dst := make(map[string]interface{})
+
+	mask := fieldmask_utils.MaskFromString("As")
+	err := fieldmask_utils.StructToMap(mask, src, dst)
+	require.NoError(t, err)
+
+	jsonStr, _ := json.Marshal(dst)
+	assert.Equal(t, string(jsonStr), "{\"As\":null}")
 }
 
 func TestStructToStruct_CopySlice_WithDiffentAddr_WithDifferentFieldName(t *testing.T) {

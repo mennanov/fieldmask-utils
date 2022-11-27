@@ -361,6 +361,10 @@ func structToMap(filter FieldFilter, src interface{}, dst map[string]interface{}
 				continue
 			}
 			var newValue []map[string]interface{}
+			if srcField.Kind() == reflect.Slice && !srcField.IsNil() {
+				// If the source slice is not nil then the dst should not be nil either even if the src slice is empty.
+				newValue = make([]map[string]interface{}, 0, srcField.Len())
+			}
 			existingValue, ok := dst[dstName]
 			if ok {
 				v := reflect.ValueOf(existingValue)
