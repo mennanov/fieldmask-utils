@@ -282,7 +282,7 @@ func TestStructToMap_Success(t *testing.T) {
 	mask := fieldmask_utils.MaskFromString(
 		"Id,Avatar{OriginalUrl},Tags,Images,Permissions,Friends{Images{ResizedUrl}}")
 	err := fieldmask_utils.StructToMap(mask, testUserFull, userDst)
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	expected := map[string]interface{}{
 		"Id": testUserFull.Id,
 		"Avatar": map[string]interface{}{
@@ -311,11 +311,11 @@ func TestStructToMap_PartialProtoSuccess(t *testing.T) {
 	mask := fieldmask_utils.MaskFromString(
 		"Id,Avatar{OriginalUrl},Images,Username,Permissions,Name{MaleName}")
 	err := fieldmask_utils.StructToMap(mask, testUserPartial, userDst)
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	expected := map[string]interface{}{
 		"Id":          testUserPartial.Id,
 		"Avatar":      nil,
-		"Images":      []map[string]interface{}(nil),
+		"Images":      []map[string]interface{}{},
 		"Username":    testUserPartial.Username,
 		"Permissions": []testproto.Permission(nil),
 		"Name":        nil,
