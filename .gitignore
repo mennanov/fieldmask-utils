@@ -1,3 +1,4 @@
 .idea/
 vendor/
-coverage.*
+coverage.out
+coverage.txt
