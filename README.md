@@ -1,7 +1,7 @@
 ## Protobuf Field Mask utils for Go
 
-[![Build Status](https://cloud.drone.io/api/badges/mennanov/fieldmask-utils/status.svg)](https://cloud.drone.io/mennanov/fieldmask-utils)
-[![Coverage Status](https://coveralls.io/repos/github/mennanov/fieldmask-utils/badge.svg?branch=master)](https://coveralls.io/github/mennanov/fieldmask-utils?branch=master)
+[![Tests](https://github.com/mennanov/fieldmask-utils/actions/workflows/tests.yml/badge.svg)](https://github.com/mennanov/fieldmask-utils/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/mennanov/fieldmask-utils/branch/master/graph/badge.svg?token=O7HtNMO6Ra)](https://codecov.io/gh/mennanov/fieldmask-utils)
 
 Features:
 
