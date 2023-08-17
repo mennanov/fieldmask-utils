@@ -3,11 +3,12 @@ package fieldmask_utils_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 )
@@ -1213,6 +1214,26 @@ func TestStructToMap_NestedStruct_EmptyDst_OptionDst(t *testing.T) {
 			"some_field": src.A.Field2,
 		},
 	}, dst)
+
+	// with src tag
+	dst = make(map[string]interface{})
+	err = fieldmask_utils.StructToMap(mask, src, dst, opts, fieldmask_utils.WithSrcTag("db"))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": src.Field1,
+	}, dst)
+
+	mask = fieldmask_utils.MaskFromString("Field1,another_name{some_field}")
+	dst = make(map[string]interface{})
+	err = fieldmask_utils.StructToMap(mask, src, dst, opts, fieldmask_utils.WithSrcTag("db"))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": src.Field1,
+		"another_name": map[string]interface{}{
+			"some_field": src.A.Field2,
+		},
+	}, dst)
+
 }
 
 func TestStructToMap_NestedStruct_NonEmptyDst(t *testing.T) {
@@ -1992,6 +2013,15 @@ func TestStructToStruct_WithMultiTagComma(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{
 		"field": 1,
+	}, dst)
+
+	// src tag
+	mask = fieldmask_utils.MaskFromString("field")
+	dst = make(map[string]interface{})
+	err = fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithSrcTag("json"))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field": 1,
 	}, dst)
 }
 

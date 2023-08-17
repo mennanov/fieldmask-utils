@@ -2,11 +2,12 @@
 package fieldmask_utils
 
 import (
+	"reflect"
+	"strings"
+
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
-	"reflect"
-	"strings"
 )
 
 // StructToStruct copies `src` struct to `dst` struct using the given FieldFilter.
@@ -71,16 +72,16 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 		for i := 0; i < src.NumField(); i++ {
 			srcType := src.Type()
-			fieldName := srcType.Field(i).Name
+			srcName := dstKey(userOptions.SrcTag, srcType.Field(i))
 			dstName := dstKey(userOptions.DstTag, srcType.Field(i))
 
-			subFilter, ok := filter.Filter(fieldName)
+			subFilter, ok := filter.Filter(srcName)
 			if !ok {
 				// Skip this field.
 				continue
 			}
 
-			srcField := src.FieldByName(fieldName)
+			srcField := src.Field(i)
 			if !srcField.CanInterface() {
 				continue
 			}
@@ -236,6 +237,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 // options are used in StructToStruct and StructToMap functions to modify the copying behavior.
 type options struct {
 	DstTag string
+	SrcTag string // copy according to src tag, i.g. json
 
 	// CopyListSize can control the number of elements copied from src depending on src's Value
 	CopyListSize func(src *reflect.Value) int
@@ -264,6 +266,13 @@ type Option func(*options)
 func WithTag(s string) Option {
 	return func(o *options) {
 		o.DstTag = s
+	}
+}
+
+// WithSrcTag set SrcTag of option, you can copy field according to field's tag of src object.
+func WithSrcTag(s string) Option {
+	return func(o *options) {
+		o.SrcTag = s
 	}
 }
 
@@ -321,18 +330,18 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 		}
 		srcType := src.Type()
 		for i := 0; i < src.NumField(); i++ {
-			fieldName := srcType.Field(i).Name
+			srcName  := dstKey(userOptions.SrcTag, srcType.Field(i))
 			if !isExported(srcType.Field(i)) {
 				// Unexported fields can not be copied.
 				continue
 			}
 
-			subFilter, ok := filter.Filter(fieldName)
+			subFilter, ok := filter.Filter(srcName)
 			if !ok {
 				// Skip this field.
 				continue
 			}
-			srcField := indirect(src.FieldByName(fieldName))
+			srcField := indirect(src.Field(i))
 			dstName := dstKey(userOptions.DstTag, srcType.Field(i))
 			mapValue := indirect(dst.MapIndex(reflect.ValueOf(dstName)))
 			if !mapValue.IsValid() {
@@ -345,7 +354,7 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 				}
 			}
 			if userOptions.MapVisitor != nil {
-				result := userOptions.MapVisitor(filter, src, mapValue, fieldName, dstName, srcField)
+				result := userOptions.MapVisitor(filter, src, mapValue, srcName, dstName, srcField)
 				if result.UpdatedDst != nil {
 					mapValue = *result.UpdatedDst
 
