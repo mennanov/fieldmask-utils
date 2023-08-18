@@ -72,8 +72,8 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 		for i := 0; i < src.NumField(); i++ {
 			srcType := src.Type()
-			srcName := dstKey(userOptions.SrcTag, srcType.Field(i))
-			dstName := dstKey(userOptions.DstTag, srcType.Field(i))
+			srcName := fieldName(userOptions.SrcTag, srcType.Field(i))
+			dstName := fieldName(userOptions.DstTag, srcType.Field(i))
 
 			subFilter, ok := filter.Filter(srcName)
 			if !ok {
@@ -236,8 +236,11 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 // options are used in StructToStruct and StructToMap functions to modify the copying behavior.
 type options struct {
+	// DstTag can be used to customize the dst field name according to the field's tag, i.g. json.
 	DstTag string
-	SrcTag string // copy according to src tag, i.g. json
+
+	// SrcTag can be used to customize the src field name according to the field's tag, i.g. json.
+	SrcTag string
 
 	// CopyListSize can control the number of elements copied from src depending on src's Value
 	CopyListSize func(src *reflect.Value) int
@@ -269,7 +272,7 @@ func WithTag(s string) Option {
 	}
 }
 
-// WithSrcTag set SrcTag of option, you can copy field according to field's tag of src object.
+// WithSrcTag sets an option that gets the source field name from the field's tag.
 func WithSrcTag(s string) Option {
 	return func(o *options) {
 		o.SrcTag = s
@@ -295,7 +298,8 @@ func newDefaultOptions() *options {
 	return &options{CopyListSize: func(src *reflect.Value) int { return src.Len() }}
 }
 
-func dstKey(tag string, f reflect.StructField) string {
+// fieldName gets the field name according to the field's tag, or gets StructField.Name default when the field's tag is empty.
+func fieldName(tag string, f reflect.StructField) string {
 	if tag == "" {
 		return f.Name
 	}
@@ -330,7 +334,7 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 		}
 		srcType := src.Type()
 		for i := 0; i < src.NumField(); i++ {
-			srcName  := dstKey(userOptions.SrcTag, srcType.Field(i))
+			srcName  := fieldName(userOptions.SrcTag, srcType.Field(i))
 			if !isExported(srcType.Field(i)) {
 				// Unexported fields can not be copied.
 				continue
@@ -342,7 +346,7 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 				continue
 			}
 			srcField := indirect(src.Field(i))
-			dstName := dstKey(userOptions.DstTag, srcType.Field(i))
+			dstName := fieldName(userOptions.DstTag, srcType.Field(i))
 			mapValue := indirect(dst.MapIndex(reflect.ValueOf(dstName)))
 			if !mapValue.IsValid() {
 				if srcField.IsValid() {

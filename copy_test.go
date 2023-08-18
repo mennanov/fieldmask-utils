@@ -1214,26 +1214,6 @@ func TestStructToMap_NestedStruct_EmptyDst_OptionDst(t *testing.T) {
 			"some_field": src.A.Field2,
 		},
 	}, dst)
-
-	// with src tag
-	dst = make(map[string]interface{})
-	err = fieldmask_utils.StructToMap(mask, src, dst, opts, fieldmask_utils.WithSrcTag("db"))
-	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"Field1": src.Field1,
-	}, dst)
-
-	mask = fieldmask_utils.MaskFromString("Field1,another_name{some_field}")
-	dst = make(map[string]interface{})
-	err = fieldmask_utils.StructToMap(mask, src, dst, opts, fieldmask_utils.WithSrcTag("db"))
-	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"Field1": src.Field1,
-		"another_name": map[string]interface{}{
-			"some_field": src.A.Field2,
-		},
-	}, dst)
-
 }
 
 func TestStructToMap_NestedStruct_NonEmptyDst(t *testing.T) {
@@ -2014,15 +1994,6 @@ func TestStructToStruct_WithMultiTagComma(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"field": 1,
 	}, dst)
-
-	// src tag
-	mask = fieldmask_utils.MaskFromString("field")
-	dst = make(map[string]interface{})
-	err = fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithSrcTag("json"))
-	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"Field": 1,
-	}, dst)
 }
 
 func TestStructToMap_WithInterface(t *testing.T) {
@@ -2226,5 +2197,72 @@ func TestStructToStruct_CopyArraySizeAccordingFieldName(t *testing.T) {
 	assert.Equal(t, &A{
 		Field1: [3]int{1, 2},
 		Field2: [3]int{1, 2, 3},
+	}, dst)
+}
+
+func TestStructToStruct_WithSrcTag(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 int `db:"some_field"`
+	}
+	type B struct {
+		Field1 string `struct:"a_name"`
+		A      A      `db:"another_name,omitempty"`
+	}
+	src := &B{
+		Field1: "B Field1",
+		A: A{
+			Field1: "A Field 1",
+			Field2: 1,
+		},
+	}
+	dst := &B{}
+	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
+	err := fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithSrcTag("db"))
+	require.NoError(t, err)
+	assert.Equal(t, &B{Field1: src.Field1}, dst)
+
+	mask, _ = fieldmask_utils.MaskFromPaths([]string{"Field1", "another_name.some_field"}, func(s string) string { return s })
+	dst = &B{}
+	err = fieldmask_utils.StructToStruct(mask, src, dst, fieldmask_utils.WithSrcTag("db"))
+	require.NoError(t, err)
+	assert.Equal(t, &B{Field1: src.Field1, A: A{Field2: src.A.Field2}}, dst)
+}
+
+func TestStructToMap_WithSrcTag(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 int  `db:"some_field1" json:"some_field1_json"`
+		Field3 bool `db:"some_field2" json:"some_field2_json"`
+	}
+	type B struct {
+		Field1 string `struct:"a_name"`
+		A      A      `db:"another_name,omitempty" json:"another_name_json"`
+	}
+	src := &B{
+		Field1: "B Field1",
+		A: A{
+			Field1: "A Field 1",
+			Field2: 1,
+		},
+	}
+	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
+	dst := make(map[string]interface{})
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithTag("json"), fieldmask_utils.WithSrcTag("db"))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": src.Field1,
+	}, dst)
+
+	mask, _ = fieldmask_utils.MaskFromPaths([]string{"Field1", "another_name.some_field1", "another_name.some_field2"}, func(s string) string { return s })
+	dst = make(map[string]interface{})
+	err = fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithTag("json"), fieldmask_utils.WithSrcTag("db"))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"Field1": src.Field1,
+		"another_name_json": map[string]interface{}{
+			"some_field1_json": src.A.Field2,
+			"some_field2_json": false,
+		},
 	}, dst)
 }
