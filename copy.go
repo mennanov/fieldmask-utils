@@ -114,7 +114,7 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 			}
 
 			// If subfilter is empty then copy the entire any without any unmarshalling.
-			if filter.IsEmpty() {
+			if filter.IsEmpty() && !userOptions.UnmarshalAllAny {
 				dst.Set(*src)
 				break
 			}
@@ -256,6 +256,12 @@ type options struct {
 	// It is called before copying the data from source to destination allowing custom processing.
 	// If the visitor function returns true the visited field is skipped.
 	MapVisitor mapVisitor
+
+	// UnmarshalAllAny is used to indicate unmarshal all any fields. Default to true to keep backward compatibility.
+	//
+	// If an any field is encountered and this flag is not set, it will only Unmarshal it if there is a subfilter for that field.
+	// If set it will always Unmarshal all any fields
+	UnmarshalAllAny bool
 }
 
 // mapVisitor is called for every filtered field in structToMap.
@@ -299,9 +305,18 @@ func WithMapVisitor(visitor mapVisitor) Option {
 	}
 }
 
+func WithUnmarshalAllAny(unmarshal bool) Option {
+	return func(o *options) {
+		o.UnmarshalAllAny = unmarshal
+	}
+}
+
 func newDefaultOptions() *options {
 	// set default CopyListSize is func which return src.Len()
-	return &options{CopyListSize: func(src *reflect.Value) int { return src.Len() }}
+	return &options{
+		CopyListSize:    func(src *reflect.Value) int { return src.Len() },
+		UnmarshalAllAny: true,
+	}
 }
 
 // fieldName gets the field name according to the field's tag, or gets StructField.Name default when the field's tag is empty.

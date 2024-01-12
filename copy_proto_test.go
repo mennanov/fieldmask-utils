@@ -278,25 +278,41 @@ func TestStructToStruct_NonProtoFail(t *testing.T) {
 }
 
 func TestStructToStruct_UnknownAny(t *testing.T) {
-	userSrc := &testproto.User{
-		Details: []*anypb.Any{
-			{
-				TypeUrl: "example.com/example/UnknownType",
-				Value:   []byte("unknown"),
+	getUsers := func() (*testproto.User, *testproto.User) {
+		user1 := &testproto.User{
+			Details: []*anypb.Any{
+				{
+					TypeUrl: "example.com/example/UnknownType",
+					Value:   []byte("unknown"),
+				},
 			},
-		},
+		}
+		user2 := &testproto.User{}
+		return user1, user2
 	}
-	userDst := &testproto.User{}
+
+	userWithUnknown, emptyUser := getUsers()
 
 	mask := fieldmask_utils.MaskFromString("Details")
 
-	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst)
+	err := fieldmask_utils.StructToStruct(mask, userWithUnknown, emptyUser, fieldmask_utils.WithUnmarshalAllAny(false))
 	assert.NoError(t, err)
-	assert.Equal(t, userSrc.Details, userDst.Details)
+	assert.Equal(t, userWithUnknown.Details, emptyUser.Details)
+
+	userWithUnknown, emptyUser = getUsers()
+
+	err = fieldmask_utils.StructToStruct(mask, emptyUser, userWithUnknown, fieldmask_utils.WithUnmarshalAllAny(false))
+	assert.NoError(t, err)
+	assert.Equal(t, userWithUnknown.Details, emptyUser.Details)
+
+	userWithUnknown, emptyUser = getUsers()
+
+	err = fieldmask_utils.StructToStruct(mask, userWithUnknown, emptyUser)
+	assert.Equal(t, "proto:\u00a0not found", err.Error())
 
 	mask = fieldmask_utils.MaskFromString("Details{Id}")
-	err = fieldmask_utils.StructToStruct(mask, userSrc, userDst)
-	assert.Equal(t, "proto: not found", err.Error())
+	err = fieldmask_utils.StructToStruct(mask, userWithUnknown, emptyUser, fieldmask_utils.WithUnmarshalAllAny(false))
+	assert.Equal(t, "proto:\u00a0not found", err.Error())
 }
 func TestStructToMap_Success(t *testing.T) {
 	userDst := make(map[string]interface{})
