@@ -113,6 +113,12 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 				return errors.Errorf("dst type is %s, expected: %s ", dst.Type(), "*any.Any")
 			}
 
+			// If subfilter is empty then copy the entire any without any unmarshalling.
+			if filter.IsEmpty() {
+				dst.Set(*src)
+				break
+			}
+
 			srcProto, err := srcAny.UnmarshalNew()
 			if err != nil {
 				return errors.WithStack(err)
@@ -334,7 +340,7 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 		}
 		srcType := src.Type()
 		for i := 0; i < src.NumField(); i++ {
-			srcName  := fieldName(userOptions.SrcTag, srcType.Field(i))
+			srcName := fieldName(userOptions.SrcTag, srcType.Field(i))
 			if !isExported(srcType.Field(i)) {
 				// Unexported fields can not be copied.
 				continue

@@ -277,6 +277,27 @@ func TestStructToStruct_NonProtoFail(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestStructToStruct_UnknownAny(t *testing.T) {
+	userSrc := &testproto.User{
+		Details: []*anypb.Any{
+			{
+				TypeUrl: "example.com/example/UnknownType",
+				Value:   []byte("unknown"),
+			},
+		},
+	}
+	userDst := &testproto.User{}
+
+	mask := fieldmask_utils.MaskFromString("Details")
+
+	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst)
+	assert.NoError(t, err)
+	assert.Equal(t, userSrc.Details, userDst.Details)
+
+	mask = fieldmask_utils.MaskFromString("Details{Id}")
+	err = fieldmask_utils.StructToStruct(mask, userSrc, userDst)
+	assert.Equal(t, "proto: not found", err.Error())
+}
 func TestStructToMap_Success(t *testing.T) {
 	userDst := make(map[string]interface{})
 	mask := fieldmask_utils.MaskFromString(
