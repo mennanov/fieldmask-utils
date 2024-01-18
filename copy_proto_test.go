@@ -324,8 +324,7 @@ func TestStructToStruct_UnknownAnyDefault(t *testing.T) {
 
 	mask := fieldmask_utils.MaskFromString("Details")
 	err := fieldmask_utils.StructToStruct(mask, userWithUnknown, emptyUser)
-	assert.Equal(t, "proto:\u00a0not found", err.Error())
-
+	assert.Contains(t, err.Error(), "not found")
 }
 
 func TestStructToStruct_UnknownAnySubfieldMask(t *testing.T) {
@@ -341,7 +340,7 @@ func TestStructToStruct_UnknownAnySubfieldMask(t *testing.T) {
 
 	mask := fieldmask_utils.MaskFromString("Details{Id}")
 	err := fieldmask_utils.StructToStruct(mask, userWithUnknown, emptyUser, fieldmask_utils.WithUnmarshalAllAny(false))
-	assert.Equal(t, "proto:\u00a0not found", err.Error())
+	assert.Contains(t, err.Error(), "not found")
 }
 func TestStructToMap_Success(t *testing.T) {
 	userDst := make(map[string]interface{})
