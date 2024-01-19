@@ -277,6 +277,71 @@ func TestStructToStruct_NonProtoFail(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestStructToStruct_UnknownAnyInSrcNoSubfieldMask(t *testing.T) {
+	userWithUnknown := &testproto.User{
+		Details: []*anypb.Any{
+			{
+				TypeUrl: "example.com/example/UnknownType",
+				Value:   []byte("unknown"),
+			},
+		},
+	}
+	emptyUser := &testproto.User{}
+
+	mask := fieldmask_utils.MaskFromString("Details")
+	err := fieldmask_utils.StructToStruct(mask, userWithUnknown, emptyUser, fieldmask_utils.WithUnmarshalAllAny(false))
+	assert.NoError(t, err)
+	assert.Equal(t, userWithUnknown.Details, emptyUser.Details)
+}
+
+func TestStructToStruct_UnknownAnyInDstNoSubfieldMask(t *testing.T) {
+	userWithUnknown := &testproto.User{
+		Details: []*anypb.Any{
+			{
+				TypeUrl: "example.com/example/UnknownType",
+				Value:   []byte("unknown"),
+			},
+		},
+	}
+	emptyUser := &testproto.User{}
+
+	mask := fieldmask_utils.MaskFromString("Details")
+	err := fieldmask_utils.StructToStruct(mask, emptyUser, userWithUnknown, fieldmask_utils.WithUnmarshalAllAny(false))
+	assert.NoError(t, err)
+	assert.Equal(t, userWithUnknown.Details, emptyUser.Details)
+}
+
+func TestStructToStruct_UnknownAnyDefault(t *testing.T) {
+	userWithUnknown := &testproto.User{
+		Details: []*anypb.Any{
+			{
+				TypeUrl: "example.com/example/UnknownType",
+				Value:   []byte("unknown"),
+			},
+		},
+	}
+	emptyUser := &testproto.User{}
+
+	mask := fieldmask_utils.MaskFromString("Details")
+	err := fieldmask_utils.StructToStruct(mask, userWithUnknown, emptyUser)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestStructToStruct_UnknownAnySubfieldMask(t *testing.T) {
+	userWithUnknown := &testproto.User{
+		Details: []*anypb.Any{
+			{
+				TypeUrl: "example.com/example/UnknownType",
+				Value:   []byte("unknown"),
+			},
+		},
+	}
+	emptyUser := &testproto.User{}
+
+	mask := fieldmask_utils.MaskFromString("Details{Id}")
+	err := fieldmask_utils.StructToStruct(mask, userWithUnknown, emptyUser, fieldmask_utils.WithUnmarshalAllAny(false))
+	assert.Contains(t, err.Error(), "not found")
+}
 func TestStructToMap_Success(t *testing.T) {
 	userDst := make(map[string]interface{})
 	mask := fieldmask_utils.MaskFromString(
