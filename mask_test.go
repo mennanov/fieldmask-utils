@@ -1,6 +1,9 @@
 package fieldmask_utils_test
 
 import (
+	"github.com/gojaguar/jaguar/strings"
+	"github.com/mennanov/fieldmask-utils/testproto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -134,4 +137,22 @@ func TestMaskFromString(t *testing.T) {
 		assert.Equal(t, testCase.expectedMask, mask)
 		assert.Equal(t, testCase.length, len(mask))
 	}
+}
+
+func TestStructToMapWhileApplyingMask(t *testing.T) {
+	mask := &fieldmaskpb.FieldMask{Paths: []string{"username"}}
+	mask.Normalize()
+	req := &testproto.UpdateUserRequest{
+		User: &testproto.User{
+			Id:       1234,
+			Username: "Test",
+		},
+	}
+	require.True(t, mask.IsValid(req))
+	protoMask, err := fieldmask_utils.MaskFromProtoFieldMask(mask, strings.PascalCase)
+	require.Nil(t, err)
+	m := make(map[string]any)
+	err = fieldmask_utils.StructToMap(protoMask, req, m)
+	require.Nil(t, err)
+	assert.Equal(t, map[string]any{"Title": "test"}, m)
 }
