@@ -151,8 +151,8 @@ func TestStructToMapWhileApplyingMask(t *testing.T) {
 	require.True(t, mask.IsValid(req))
 	protoMask, err := fieldmask_utils.MaskFromProtoFieldMask(mask, strings.PascalCase)
 	require.Nil(t, err)
-	m := make(map[string]any)
+	m := make(map[string]interface{})
 	err = fieldmask_utils.StructToMap(protoMask, req, m)
 	require.Nil(t, err)
-	assert.Equal(t, map[string]any{"Title": "test"}, m)
+	assert.Equal(t, map[string]interface{}{"Title": "test"}, m)
 }
