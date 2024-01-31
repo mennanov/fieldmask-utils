@@ -95,23 +95,27 @@ there are multiple options for the naming function described above:
 
 ```go
 func main() {
-mask := &fieldmaskpb.FieldMask{Paths: []string{"username"}}
-mask.Normalize()
-req := &UpdateUserRequest{
-User: &User{
-Id:       1234,
-Username: "Test",
-},
-}
-if !mask.IsValid(req) {
-return
-}
-protoMask, err := fieldmask_utils.MaskFromProtoFieldMask(mask, strings.PascalCase)
-if err != nil {
-return
-}
-m := make(map[string]any)
-err = fieldmask_utils.StructToMap(protoMask, req, m)
+    mask := &fieldmaskpb.FieldMask{Paths: []string{"username"}}
+    mask.Normalize()
+    req := &UpdateUserRequest{
+        User: &User{
+            Id:       1234,
+            Username: "Test",
+        },
+    }
+    if !mask.IsValid(req) {
+        return
+    }
+    protoMask, err := fieldmask_utils.MaskFromProtoFieldMask(mask, strings.PascalCase)
+    if err != nil {
+        return
+    }
+    m := make(map[string]any)
+    err = fieldmask_utils.StructToMap(protoMask, req, m)
+	if err != nil {
+		return
+    }
+	fmt.Println("Resulting map:", m)
 }
 ```
 
