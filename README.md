@@ -90,8 +90,8 @@ there are multiple options for the naming function described above:
   the [original protobuf repository](https://github.com/golang/protobuf/blob/master/protoc-gen-go/generator/generator.go#L2648).
   This repository has been deprecated and it will potentially trigger lint errors.
     - You can copy-paste the `CamelCase` function to your own project or,
-    - You can use an [Open Source alternative](https://github.com/gojaguar/jaguar) that provides the same functionality
-      and already took care of copying the code and also added tests.
+    - You can use an [Open Source alternative](https://github.com/gojaguar/jaguar) that provides the same functionality,
+      already took care of copying the code, and also added tests.
 
 ```go
 func main() {
