@@ -91,7 +91,7 @@ there are multiple options for the naming function described above:
   This repository has been deprecated and it will potentially trigger lint errors.
     - You can copy-paste the `CamelCase` function to your own project or,
     - You can use an [Open Source alternative](https://github.com/gojaguar/jaguar) that provides the same functionality,
-      already took care of copying the code, and also added tests.
+      already took care of [copying the code](https://github.com/gojaguar/jaguar/blob/main/strings/pascal_case.go), and also added tests.
 
 ```go
 func main() {
@@ -118,6 +118,8 @@ func main() {
 	fmt.Println("Resulting map:", m)
 }
 ```
+
+This will result in a map that contains the fields that need to be updated with their respective values.
 
 
 ### Limitations
