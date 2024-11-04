@@ -1,7 +1,7 @@
 ## Protobuf Field Mask utils for Go
 
-[![Tests](https://github.com/mennanov/fieldmask-utils/actions/workflows/tests.yml/badge.svg)](https://github.com/mennanov/fieldmask-utils/actions/workflows/tests.yml)
-[![Coverage](https://codecov.io/gh/mennanov/fieldmask-utils/branch/master/graph/badge.svg?token=O7HtNMO6Ra)](https://codecov.io/gh/mennanov/fieldmask-utils)
+[![Tests](https://github.com/psioz-org/fieldmask-utils/actions/workflows/tests.yml/badge.svg)](https://github.com/psioz-org/fieldmask-utils/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/psioz-org/fieldmask-utils/branch/master/graph/badge.svg?token=O7HtNMO6Ra)](https://codecov.io/gh/psioz-org/fieldmask-utils)
 
 Features:
 
@@ -10,7 +10,7 @@ Features:
 * Extensible masks (e.g. inverse mask: copy all except those mentioned, etc.)
 * Supports [Protobuf Any](https://developers.google.com/protocol-buffers/docs/proto3#any) message types.
 
-If you're looking for a simple FieldMask library to work with protobuf messages only (not arbitrary structs) consider this tiny repo: [https://github.com/mennanov/fmutils](https://github.com/mennanov/fmutils)
+If you're looking for a simple FieldMask library to work with protobuf messages only (not arbitrary structs) consider this tiny repo: [https://github.com/psioz-org/fmutils](https://github.com/psioz-org/fmutils)
 
 ### Examples
 
@@ -28,7 +28,7 @@ message UpdateUserRequest {
 ```go
 package main
 
-import fieldmask_utils "github.com/mennanov/fieldmask-utils"
+import fieldmask_utils "github.com/psioz-org/fieldmask-utils"
 
 // A function that maps field mask field names to the names used in Go structs.
 // It has to be implemented according to your needs.
@@ -54,7 +54,7 @@ Copy from a protobuf message to a `map[string]interface{}`:
 ```go
 package main
 
-import fieldmask_utils "github.com/mennanov/fieldmask-utils"
+import fieldmask_utils "github.com/psioz-org/fieldmask-utils"
 
 func main() {
 	var request UpdateUserRequest
@@ -70,7 +70,7 @@ Copy with an inverse mask:
 ```go
 package main
 
-import fieldmask_utils "github.com/mennanov/fieldmask-utils"
+import fieldmask_utils "github.com/psioz-org/fieldmask-utils"
 
 func main() {
 	var request UpdateUserRequest

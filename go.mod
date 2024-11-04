@@ -1,4 +1,4 @@
-module github.com/mennanov/fieldmask-utils
+module github.com/psioz-org/fieldmask-utils
 
 go 1.16
 

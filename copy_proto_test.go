@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	fieldmask_utils "github.com/mennanov/fieldmask-utils"
-	"github.com/mennanov/fieldmask-utils/testproto"
+	fieldmask_utils "github.com/psioz-org/fieldmask-utils"
+	"github.com/psioz-org/fieldmask-utils/testproto"
 )
 
 var testUserFull *testproto.User

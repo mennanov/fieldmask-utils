@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	fieldmask_utils "github.com/mennanov/fieldmask-utils"
+	fieldmask_utils "github.com/psioz-org/fieldmask-utils"
 )
 
 func TestStructToStruct_SimpleStruct(t *testing.T) {
