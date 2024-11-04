@@ -381,7 +381,7 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 			}
 			srcField := indirect(src.Field(i))
 			dstName, omitempty := fieldInfo(userOptions.DstTag, srcType.Field(i))
-			if dstName == "-" || (omitempty && srcField.IsZero()) {
+			if dstName == "-" || (omitempty && (!srcField.IsValid() || srcField.IsZero())) { //Check IsValid because it may be indirected
 				continue
 			}
 			mapValue := indirect(dst.MapIndex(reflect.ValueOf(dstName)))
