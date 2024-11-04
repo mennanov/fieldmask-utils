@@ -4,6 +4,7 @@ package fieldmask_utils
 import (
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
@@ -320,19 +321,30 @@ func newDefaultOptions() *options {
 }
 
 // fieldName gets the field name according to the field's tag, or gets StructField.Name default when the field's tag is empty.
-func fieldName(tag string, f reflect.StructField) string {
+func fieldName(tag string, f reflect.StructField) (name string) {
+	name, _ = fieldInfo(tag, f)
+	return
+}
+
+// fieldInfo gets the field info according to the field's tag, or gets StructField.Name default when the field's tag is empty.
+func fieldInfo(tag string, f reflect.StructField) (name string, omitempty bool) {
+	name = f.Name
 	if tag == "" {
-		return f.Name
+		return
 	}
 	lookupResult, ok := f.Tag.Lookup(tag)
 	if !ok {
-		return f.Name
+		return
 	}
-	firstComma := strings.Index(lookupResult, ",")
-	if firstComma == -1 {
-		return lookupResult
+	ss := strings.Split(lookupResult, ",")
+	name = ss[0]
+	for i := 1; i < len(ss); i++ {
+		if ss[i] == "omitempty" {
+			omitempty = true
+			return
+		}
 	}
-	return lookupResult[:firstComma]
+	return
 }
 
 // StructToMap copies `src` struct to the `dst` map.
@@ -354,6 +366,7 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 			return dst, errors.Errorf("incompatible destination kind: %s, expected map", dst.Kind())
 		}
 		srcType := src.Type()
+		embeddedList := make([]reflect.Value, 0)
 		for i := 0; i < src.NumField(); i++ {
 			srcName := fieldName(userOptions.SrcTag, srcType.Field(i))
 			if !isExported(srcType.Field(i)) {
@@ -367,7 +380,10 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 				continue
 			}
 			srcField := indirect(src.Field(i))
-			dstName := fieldName(userOptions.DstTag, srcType.Field(i))
+			dstName, omitempty := fieldInfo(userOptions.DstTag, srcType.Field(i))
+			if dstName == "-" || (omitempty && srcField.IsZero()) {
+				continue
+			}
 			mapValue := indirect(dst.MapIndex(reflect.ValueOf(dstName)))
 			if !mapValue.IsValid() {
 				if srcField.IsValid() {
@@ -395,13 +411,30 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 				dst.SetMapIndex(reflect.ValueOf(dstName), srcField)
 				continue
 			}
+			if t, ok := srcField.Interface().(time.Time); ok {
+				dst.SetMapIndex(reflect.ValueOf(dstName), reflect.ValueOf(t))
+				continue
+			}
+
 			var err error
 			if mapValue, err = structToMap(subFilter, srcField, mapValue, userOptions); err != nil {
 				return dst, err
 			}
+			if srcType.Kind() == reflect.Struct && srcType.Field(i).Anonymous {
+				embeddedList = append(embeddedList, mapValue)
+				continue
+			}
 			dst.SetMapIndex(reflect.ValueOf(dstName), mapValue)
 		}
-
+		for _, mapValue := range embeddedList {
+			if m, ok := mapValue.Interface().(map[string]interface{}); ok {
+				for k, v := range m {
+					if kr := reflect.ValueOf(k); !dst.MapIndex(kr).IsValid() {
+						dst.SetMapIndex(kr, reflect.ValueOf(v))
+					}
+				}
+			}
+		}
 	case reflect.Ptr:
 		if src.IsNil() {
 			reflect.ValueOf(dst).Set(reflect.ValueOf(nil))

@@ -3,6 +3,16 @@
 [![Tests](https://github.com/psioz-org/fieldmask-utils/actions/workflows/tests.yml/badge.svg)](https://github.com/psioz-org/fieldmask-utils/actions/workflows/tests.yml)
 [![Coverage](https://codecov.io/gh/psioz-org/fieldmask-utils/branch/master/graph/badge.svg?token=O7HtNMO6Ra)](https://codecov.io/gh/psioz-org/fieldmask-utils)
 
+Start using forked by version after repo path changed: go get github.com/psioz-org/fieldmask-utils@v1.0.0
+
+Fork version additional features:
+
+* StructToMap
+  * Handle time.Time
+  * Handle omit field tags "-"
+  * Handle omitempty
+  * Handle embedded/nested embedded struct
+
 Features:
 
 * Copy from any Go struct to any compatible Go struct with a field mask applied
