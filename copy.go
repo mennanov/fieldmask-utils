@@ -88,7 +88,13 @@ func structToStruct(filter FieldFilter, src, dst *reflect.Value, userOptions *op
 
 			dstField := dst.FieldByName(dstName)
 			if !dstField.CanSet() {
-				return errors.Errorf("Can't set a value on a destination field %s", dstName)
+				if subFilter.IsEmpty() {
+					// skip field from source not found in destination given above subfilter is ok and empty.
+					continue
+
+				} else {
+					return errors.Errorf("Can't set a value on a destination field %s", dstName)
+				}
 			}
 
 			if err := structToStruct(subFilter, &srcField, &dstField, userOptions); err != nil {

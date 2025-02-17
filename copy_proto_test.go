@@ -274,7 +274,9 @@ func TestStructToStruct_NonProtoFail(t *testing.T) {
 	userDst := &testproto.User{}
 	mask := fieldmask_utils.MaskFromString("")
 	err := fieldmask_utils.StructToStruct(mask, userSrc, userDst)
-	assert.NotNil(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, userSrc.Id, userDst.Id)
+	assert.Equal(t, userSrc.Deactivated, userDst.Deactivated)
 }
 
 func TestStructToStruct_UnknownAnyInSrcNoSubfieldMask(t *testing.T) {
