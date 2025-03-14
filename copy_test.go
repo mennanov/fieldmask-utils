@@ -7,10 +7,9 @@ import (
 	"testing"
 	"time"
 
+	fieldmask_utils "github.com/psioz-org/fieldmask-utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	fieldmask_utils "github.com/psioz-org/fieldmask-utils"
 )
 
 func TestStructToStruct_SimpleStruct(t *testing.T) {
@@ -2265,4 +2264,139 @@ func TestStructToMap_WithSrcTag(t *testing.T) {
 			"some_field2_json": false,
 		},
 	}, dst)
+}
+
+func TestStructToMap_WithSrcTagAndEmbededFilter(t *testing.T) {
+	type A struct {
+		Field1 string
+		Field2 int  `db:"some_field1" json:"some_field1_json"`
+		Field3 bool `db:"some_field2" json:"some_field2_json"`
+	}
+	type B struct {
+		Field1 string `struct:"a_name"`
+		A
+	}
+	src := &B{
+		Field1: "B Field1",
+		A: A{
+			Field1: "A Field 1",
+			Field2: 1,
+		},
+	}
+	mask := fieldmask_utils.MaskFromString("Field1,some_field2") //MUST not be "Field1,A{some_field2}"
+	dst := make(map[string]interface{})
+	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithTag("json"), fieldmask_utils.WithSrcTag("db"))
+	require.NoError(t, err)
+	fmt.Printf("dst: %v\n", dst)
+	assert.Equal(t, map[string]interface{}{
+		"Field1":           src.Field1,
+		"some_field2_json": false,
+	}, dst)
+}
+
+func TestGetMaskedFields(t *testing.T) {
+	type Product struct {
+		ProductName string `json:"product_name_json" sometag:"product_name"`
+		ProductID   string `sometag:"product_id"`
+	}
+	type ProductDetail struct {
+		Product
+		Color string `sometag:"color"`
+	}
+	type ProductSummary struct {
+		Items []ProductDetail `sometag:"items"`
+		Count int             `sometag:"count"`
+	}
+	type args struct {
+		data   interface{}
+		fields string
+		tag    string
+	}
+	data := ProductSummary{
+		Items: []ProductDetail{
+			{
+				Product: Product{
+					ProductName: "ProductName1",
+					ProductID:   "ProductID1",
+				},
+				Color: "Color1",
+			},
+			{
+				Product: Product{
+					ProductName: "ProductName2",
+					ProductID:   "ProductID2",
+				},
+				Color: "Color2",
+			},
+		},
+		Count: 2,
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantOut map[string]interface{}
+		wantErr bool
+	}{
+		{
+			name: "fail",
+			args: args{
+				data:   data,
+				fields: "{items}",
+				tag:    "sometag",
+			},
+			wantOut: map[string]interface{}{},
+			wantErr: true,
+		},
+		{
+			name: "mask",
+			args: args{
+				data:   data,
+				fields: "items{product_name,color},count",
+				tag:    "sometag",
+			},
+			wantOut: map[string]interface{}{
+				"count": 2,
+				"items": []map[string]interface{}{
+					{
+						"product_name": "ProductName1",
+						"color":        "Color1",
+					},
+					{
+						"product_name": "ProductName2",
+						"color":        "Color2",
+					},
+				},
+			},
+		},
+		{
+			name: "mask-inverse",
+			args: args{
+				data:   data,
+				fields: "-items{product_name,color},count",
+				tag:    "sometag",
+			},
+			wantOut: map[string]interface{}{
+				"items": []map[string]interface{}{
+					{
+						"product_id": "ProductID1",
+					},
+					{
+						"product_id": "ProductID2",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOut, err := fieldmask_utils.GetMaskedFields(tt.args.data, tt.args.fields, tt.args.tag)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetMaskedFields() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotOut, tt.wantOut) {
+				t.Errorf("GetMaskedFields() = %v, want %v", gotOut, tt.wantOut)
+			}
+		})
+	}
 }

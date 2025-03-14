@@ -374,10 +374,14 @@ func structToMap(filter FieldFilter, src, dst reflect.Value, userOptions *option
 				continue
 			}
 
-			subFilter, ok := filter.Filter(srcName)
-			if !ok {
-				// Skip this field.
-				continue
+			subFilter := filter
+			if !srcType.Field(i).Anonymous {
+				var ok bool
+				subFilter, ok = filter.Filter(srcName)
+				if !ok {
+					// Skip this field.
+					continue
+				}
 			}
 			srcField := indirect(src.Field(i))
 			dstName, omitempty := fieldInfo(userOptions.DstTag, srcType.Field(i))
@@ -547,4 +551,22 @@ func newValue(t reflect.Type) reflect.Value {
 // isExported is a backport of reflect.StructField.IsExported() for the older versions of golang (<1.17).
 func isExported(f reflect.StructField) bool {
 	return f.PkgPath == ""
+}
+
+func GetMaskedFields(data interface{}, fields string, tag string) (out map[string]interface{}, err error) {
+	out = map[string]interface{}{}
+	defer func() {
+		//Handle panic from library, for example mask starts with "{"
+		if rec := recover(); rec != nil {
+			err = errors.Errorf("%v", rec)
+		}
+	}()
+	var mask FieldFilter
+	if strings.HasPrefix(fields, "-") {
+		mask = MaskInverseFromString(fields[1:])
+	} else {
+		mask = MaskFromString(fields)
+	}
+	err = StructToMap(mask, data, out, WithSrcTag(tag), WithTag(tag))
+	return
 }

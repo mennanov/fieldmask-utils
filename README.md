@@ -7,11 +7,75 @@ Start using forked by version after repo path changed: go get github.com/psioz-o
 
 Fork version additional features:
 
-* StructToMap
+* StructToMap:
   * Handle time.Time
   * Handle omit field tags "-"
   * Handle omitempty
   * Handle embedded/nested embedded struct
+  * Handle embedded/nested embedded struct field mask: "level1{level2}" instead of "level1{EmbeddedStructName{level2}}
+* General usage: GetMaskedFields
+```
+    type Product struct {
+        ProductName string `json:"product_name_json" sometag:"product_name"`
+        ProductID   string `sometag:"product_id"`
+    }
+    type ProductDetail struct {
+        Product
+        Color string `sometag:"color"`
+    }
+    type ProductSummary struct {
+        Items []ProductDetail `sometag:"items"`
+        Count int             `sometag:"count"`
+    }
+	data := ProductSummary{
+		Items: []ProductDetail{
+			{
+				Product: Product{
+					ProductName: "ProductName1",
+					ProductID:   "ProductID1",
+				},
+				Color: "Color1",
+			},
+			{
+				Product: Product{
+					ProductName: "ProductName2",
+					ProductID:   "ProductID2",
+				},
+				Color: "Color2",
+			},
+		},
+		Count: 2,
+	}
+
+    Result of GetMaskedFields(data,"items{product_name,color},count","sometag")
+    {
+        "count": 2,
+        "items": [
+            {
+            "product_name": "ProductName1",
+            "color": "Color1"
+            },
+            {
+            "product_name": "ProductName2",
+            "color": "Color2"
+            }
+        ]
+    }
+
+    Result of GetMaskedFields(data,"-items{product_name,color},count","sometag")
+    {
+        "items": [
+            {
+            "product_id": "ProductID1"
+            },
+            {
+            "product_id": "ProductID2"
+            }
+        ]
+    }
+```
+---
+<br>
 
 Features:
 
@@ -20,7 +84,7 @@ Features:
 * Extensible masks (e.g. inverse mask: copy all except those mentioned, etc.)
 * Supports [Protobuf Any](https://developers.google.com/protocol-buffers/docs/proto3#any) message types.
 
-If you're looking for a simple FieldMask library to work with protobuf messages only (not arbitrary structs) consider this tiny repo: [https://github.com/psioz-org/fmutils](https://github.com/psioz-org/fmutils)
+If you're looking for a simple FieldMask library to work with protobuf messages only (not arbitrary structs) consider this tiny repo: [https://github.com/mennanov/fmutils](https://github.com/mennanov/fmutils)
 
 ### Examples
 
