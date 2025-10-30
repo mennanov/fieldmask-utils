@@ -2,8 +2,11 @@ package fieldmask_utils_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -2264,5 +2267,61 @@ func TestStructToMap_WithSrcTag(t *testing.T) {
 			"some_field1_json": src.A.Field2,
 			"some_field2_json": false,
 		},
+	}, dst)
+}
+
+func TestStructToStruct_WithConverterHook(t *testing.T) {
+	type A struct {
+		Field1 string
+	}
+	src := &A{
+		Field1: "   42   ",
+	}
+	type B struct {
+		Field1 int64
+	}
+	dst := &B{}
+	mask := fieldmask_utils.MaskFromString("Field1")
+
+	// test original error due to no conversion
+	err := fieldmask_utils.StructToStruct(mask, src, dst)
+	assert.Error(t, err)
+
+	// test conversion errors are critical
+	err = fieldmask_utils.StructToStruct(mask, src, dst,
+		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (interface{}, error) {
+			return nil, errors.New("dummy error")
+		}))
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "dummy error")
+
+	// test incompatible conversion still returns original error
+	err = fieldmask_utils.StructToStruct(mask, src, dst,
+		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (interface{}, error) {
+			return 3.14, nil
+		}))
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "differs from dst kind")
+
+	// test successful conversion
+	err = fieldmask_utils.StructToStruct(mask, src, dst,
+		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (interface{}, error) {
+			data := src.Interface()
+
+			if src.Kind() != reflect.String ||
+				dst.Kind() != reflect.Int64 {
+				return data, nil
+			}
+
+			raw, ok := data.(string)
+			if !ok {
+				return data, nil
+			}
+
+			return strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+		}))
+	require.NoError(t, err)
+	assert.Equal(t, &B{
+		Field1: 42,
 	}, dst)
 }
