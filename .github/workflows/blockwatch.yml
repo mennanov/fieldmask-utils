@@ -1,0 +1,17 @@
+name: blockwatch
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  blockwatch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: mennanov/blockwatch-action@v1
