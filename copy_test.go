@@ -2271,17 +2271,35 @@ func TestStructToMap_WithSrcTag(t *testing.T) {
 }
 
 func TestStructToStruct_WithConverterHook(t *testing.T) {
+	type E struct {
+		Field1 string
+	}
+	type F struct {
+		Field1 string
+	}
+
 	type A struct {
 		Field1 string
+		Field2 []*E
+		Field3 []*E
+		Field4 []string
 	}
 	src := &A{
 		Field1: "   42   ",
+		Field2: nil,
+		Field3: []*E{
+			{Field1: "foo"},
+		},
+		Field4: []string{"   3.141   ", "-273.15"},
 	}
 	type B struct {
 		Field1 int64
+		Field2 []*F
+		Field3 []*F
+		Field4 []float64
 	}
 	dst := &B{}
-	mask := fieldmask_utils.MaskFromString("Field1")
+	mask := fieldmask_utils.MaskFromString("Field1,Field2,Field3,Field4")
 
 	// test original error due to no conversion
 	err := fieldmask_utils.StructToStruct(mask, src, dst)
@@ -2305,6 +2323,7 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 
 	// test successful conversion
 	err = fieldmask_utils.StructToStruct(mask, src, dst,
+		// convert string to int64
 		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (interface{}, error) {
 			data := src.Interface()
 
@@ -2319,9 +2338,30 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 			}
 
 			return strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+		}),
+		// convert string to float64
+		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (interface{}, error) {
+			data := src.Interface()
+
+			if src.Kind() != reflect.String ||
+				dst.Kind() != reflect.Float64 {
+				return data, nil
+			}
+
+			raw, ok := data.(string)
+			if !ok {
+				return data, nil
+			}
+
+			return strconv.ParseFloat(strings.TrimSpace(raw), 64)
 		}))
 	require.NoError(t, err)
 	assert.Equal(t, &B{
 		Field1: 42,
+		Field2: nil,
+		Field3: []*F{
+			{Field1: "foo"},
+		},
+		Field4: []float64{3.141, -273.15},
 	}, dst)
 }
