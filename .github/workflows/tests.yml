@@ -10,12 +10,10 @@ jobs:
       matrix:
         go-version:
           # <block keep-sorted="asc" keep-unique>
-          - '1.17'
-          - '1.18'
-          - '1.19'
-          - '1.20'
-          - '1.21'
-          - '1.22'
+          - '1.23'
+          - '1.24'
+          - '1.25'
+          - '1.26'
           # </block>
 
     steps:
