@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 )
@@ -924,7 +925,7 @@ type StringerImpl struct {
 	Name string
 }
 
-func (*StringerImpl) someMethod() {}
+func (*StringerImpl) someMethod() {} // nolint:unused
 func (f *StringerImpl) String() string {
 	return f.Name
 }
@@ -1032,7 +1033,7 @@ func TestStructToStruct_DifferentDstKind(t *testing.T) {
 		Field int
 	}
 	src := &A{Field: 1}
-	dst := &map[string]interface{}{}
+	dst := &map[string]any{}
 	mask := fieldmask_utils.MaskFromString("")
 	err := fieldmask_utils.StructToStruct(mask, src, dst)
 	assert.Error(t, err)
@@ -1178,13 +1179,13 @@ func TestStructToMap_NestedStruct_EmptyDst(t *testing.T) {
 			Field2: 1,
 		},
 	}
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1,
-		"A": map[string]interface{}{
+		"A": map[string]any{
 			"Field2": src.A.Field2,
 		},
 	}, dst)
@@ -1207,13 +1208,13 @@ func TestStructToMap_NestedStruct_EmptyDst_OptionDst(t *testing.T) {
 			Field2: 1,
 		},
 	}
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
 	err := fieldmask_utils.StructToMap(mask, src, dst, opts)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1,
-		"another_name": map[string]interface{}{
+		"another_name": map[string]any{
 			"some_field": src.A.Field2,
 		},
 	}, dst)
@@ -1235,8 +1236,8 @@ func TestStructToMap_NestedStruct_NonEmptyDst(t *testing.T) {
 			Field2: 1,
 		},
 	}
-	dst := map[string]interface{}{
-		"A": map[string]interface{}{
+	dst := map[string]any{
+		"A": map[string]any{
 			"Field1": "existing value",
 			"Field2": 10,
 		},
@@ -1244,9 +1245,9 @@ func TestStructToMap_NestedStruct_NonEmptyDst(t *testing.T) {
 	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1,
-		"A": map[string]interface{}{
+		"A": map[string]any{
 			"Field1": "existing value",
 			"Field2": src.A.Field2,
 		},
@@ -1269,13 +1270,13 @@ func TestStructToMap_PtrToStruct_EmptyDst(t *testing.T) {
 			Field2: 1,
 		},
 	}
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1,
-		"A": map[string]interface{}{
+		"A": map[string]any{
 			"Field2": src.A.Field2,
 		},
 	}, dst)
@@ -1297,8 +1298,8 @@ func TestStructToMap_PtrToStruct_NonEmptyDst(t *testing.T) {
 			Field2: 1,
 		},
 	}
-	dst := map[string]interface{}{
-		"A": map[string]interface{}{
+	dst := map[string]any{
+		"A": map[string]any{
 			"Field1": "existing value",
 			"Field2": 10,
 		},
@@ -1306,9 +1307,9 @@ func TestStructToMap_PtrToStruct_NonEmptyDst(t *testing.T) {
 	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1,
-		"A": map[string]interface{}{
+		"A": map[string]any{
 			"Field1": "existing value",
 			"Field2": src.A.Field2,
 		},
@@ -1331,12 +1332,12 @@ func TestStructToMap_ArrayOfStructs_EmptyDst(t *testing.T) {
 			},
 		},
 	}
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 	mask := fieldmask_utils.MaskFromString("A{Field2}")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"A": []map[string]interface{}{
+	assert.Equal(t, map[string]any{
+		"A": []map[string]any{
 			{
 				"Field2": src.A[0].Field2,
 			},
@@ -1360,8 +1361,8 @@ func TestStructToMap_SliceOfStructs_NonEmptyDst(t *testing.T) {
 			},
 		},
 	}
-	dst := map[string]interface{}{
-		"A": []map[string]interface{}{
+	dst := map[string]any{
+		"A": []map[string]any{
 			{
 				"Field1": "dst field1",
 			},
@@ -1370,8 +1371,8 @@ func TestStructToMap_SliceOfStructs_NonEmptyDst(t *testing.T) {
 	mask := fieldmask_utils.MaskFromString("A{Field2}")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"A": []map[string]interface{}{
+	assert.Equal(t, map[string]any{
+		"A": []map[string]any{
 			{
 				"Field1": "dst field1",
 				"Field2": src.A[0].Field2,
@@ -1388,13 +1389,13 @@ func TestStructToMap_EntireSlicePrimitive_NonEmptyDst(t *testing.T) {
 		Field1: []int{1, 2, 4, 8},
 	}
 
-	dst := map[string]interface{}{
+	dst := map[string]any{
 		"Field1": []int{16, 32, 64},
 	}
 	mask := fieldmask_utils.MaskFromString("Field1")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1,
 	}, dst)
 }
@@ -1419,8 +1420,8 @@ func TestStructToMap_EntireSlice_NonEmptyDst(t *testing.T) {
 			},
 		},
 	}
-	dst := map[string]interface{}{
-		"A": []map[string]interface{}{
+	dst := map[string]any{
+		"A": []map[string]any{
 			{
 				"Field1": "dst ele1 field1",
 			},
@@ -1435,8 +1436,8 @@ func TestStructToMap_EntireSlice_NonEmptyDst(t *testing.T) {
 	mask := fieldmask_utils.MaskFromString("A")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"A": []map[string]interface{}{
+	assert.Equal(t, map[string]any{
+		"A": []map[string]any{
 			{
 				"Field1": src.A[0].Field1,
 				"Field2": src.A[0].Field2,
@@ -1458,8 +1459,8 @@ func TestStructToMap_NilSrcSlice_NonEmptyDst(t *testing.T) {
 		FieldA []A
 	}
 	src := &B{FieldA: nil}
-	dst := map[string]interface{}{
-		"FieldA": []map[string]interface{}{
+	dst := map[string]any{
+		"FieldA": []map[string]any{
 			{
 				"Field1": "dst ele1 field1",
 			},
@@ -1474,8 +1475,8 @@ func TestStructToMap_NilSrcSlice_NonEmptyDst(t *testing.T) {
 	mask := fieldmask_utils.MaskFromString("FieldA")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"FieldA": []map[string]interface{}{},
+	assert.Equal(t, map[string]any{
+		"FieldA": []map[string]any{},
 	}, dst)
 }
 
@@ -1499,8 +1500,8 @@ func TestStructToMap_EntireSlice_DstSliceLenIsLessThanSource(t *testing.T) {
 			},
 		},
 	}
-	dst := map[string]interface{}{
-		"A": []map[string]interface{}{
+	dst := map[string]any{
+		"A": []map[string]any{
 			{
 				"Field1": "dst ele1 field1",
 			},
@@ -1509,8 +1510,8 @@ func TestStructToMap_EntireSlice_DstSliceLenIsLessThanSource(t *testing.T) {
 	mask := fieldmask_utils.MaskFromString("A")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"A": []map[string]interface{}{
+	assert.Equal(t, map[string]any{
+		"A": []map[string]any{
 			{
 				"Field1": "src ele1 field1",
 				"Field2": "src ele1 field2",
@@ -1547,8 +1548,8 @@ func TestStructToMap_Array_NonEmptyDst(t *testing.T) {
 			},
 		},
 	}
-	dst := map[string]interface{}{
-		"A": [2]map[string]interface{}{
+	dst := map[string]any{
+		"A": [2]map[string]any{
 			{
 				"Field1": "dst ele1 field1",
 			},
@@ -1560,8 +1561,8 @@ func TestStructToMap_Array_NonEmptyDst(t *testing.T) {
 	mask := fieldmask_utils.MaskFromString("A{Field2}")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"A": []map[string]interface{}{
+	assert.Equal(t, map[string]any{
+		"A": []map[string]any{
 			{
 				"Field1": "dst ele1 field1",
 				"Field2": "src ele1 field2",
@@ -1585,13 +1586,13 @@ func TestStructToMap_ArrayPrimitive_NonEmptyDst(t *testing.T) {
 		Field1: [5]int{1, 2, 4, 8, 10},
 	}
 
-	dst := map[string]interface{}{
+	dst := map[string]any{
 		"Field1": [4]int{16, 32, 64, 0},
 	}
 	mask := fieldmask_utils.MaskFromString("Field1")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": [5]int{1, 2, 4, 8, 10},
 	}, dst)
 }
@@ -1604,13 +1605,13 @@ func TestStructToMap_EmptySliceSrc_NonEmptyArrayDst(t *testing.T) {
 		Field1: []int{},
 	}
 
-	dst := map[string]interface{}{
+	dst := map[string]any{
 		"Field1": [4]int{16, 32, 64, 0},
 	}
 	mask := fieldmask_utils.MaskFromString("Field1")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1,
 	}, dst)
 }
@@ -1716,7 +1717,7 @@ func TestStructToMap_CopyStructSlice_WithMaxCopyListSize(t *testing.T) {
 	src := &A{
 		Field1: []AA{{1}, {2}, {3}},
 	}
-	dst := map[string]interface{}{}
+	dst := map[string]any{}
 
 	const copySize int = 2
 	mask := fieldmask_utils.MaskFromString("Field1")
@@ -1724,8 +1725,8 @@ func TestStructToMap_CopyStructSlice_WithMaxCopyListSize(t *testing.T) {
 		return copySize
 	}))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"Field1": []map[string]interface{}{{"Field": 1}, {"Field": 2}},
+	assert.Equal(t, map[string]any{
+		"Field1": []map[string]any{{"Field": 1}, {"Field": 2}},
 	}, dst)
 }
 
@@ -1737,7 +1738,7 @@ func TestStructToMap_CopyIntSlice_WithMaxCopyListSize(t *testing.T) {
 	src := &A{
 		Field1: []int{1, 2, 3},
 	}
-	dst := map[string]interface{}{}
+	dst := map[string]any{}
 
 	const copySize int = 2
 	mask := fieldmask_utils.MaskFromString("Field1")
@@ -1745,7 +1746,7 @@ func TestStructToMap_CopyIntSlice_WithMaxCopyListSize(t *testing.T) {
 		return copySize
 	}))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": []int{1, 2},
 	}, dst)
 }
@@ -1762,7 +1763,7 @@ func TestStructToMap_CopyStructArray_WithMaxCopyListSize(t *testing.T) {
 	src := &A{
 		Field1: [3]AA{{1}, {2}, {3}},
 	}
-	dst := map[string]interface{}{}
+	dst := map[string]any{}
 
 	const copySize int = arraySize - 1
 	mask := fieldmask_utils.MaskFromString("Field1")
@@ -1770,8 +1771,8 @@ func TestStructToMap_CopyStructArray_WithMaxCopyListSize(t *testing.T) {
 		return copySize
 	}))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"Field1": []map[string]interface{}{{"Field": 1}, {"Field": 2}},
+	assert.Equal(t, map[string]any{
+		"Field1": []map[string]any{{"Field": 1}, {"Field": 2}},
 	}, dst)
 }
 
@@ -1784,13 +1785,13 @@ func TestStructToMap_CopyIntArray_WithMaxCopyListSize(t *testing.T) {
 		Field1: [arraySize]int{1, 2, 3},
 	}
 	const copySize int = arraySize - 1
-	dst := map[string]interface{}{}
+	dst := map[string]any{}
 	mask := fieldmask_utils.MaskFromString("Field1")
 	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
 		return copySize
 	}))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1[:copySize],
 	}, dst)
 }
@@ -1802,7 +1803,7 @@ func TestStructToMap_CopyStructWithPrivateFields_WithMapVisitor(t *testing.T) {
 	}
 	unixTime := time.Unix(10, 10)
 	src := &A{Time: unixTime}
-	dst := map[string]interface{}{}
+	dst := map[string]any{}
 	mask := fieldmask_utils.MaskFromString("Time")
 	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMapVisitor(
 		func(_ fieldmask_utils.FieldFilter, _, dst reflect.Value,
@@ -1816,7 +1817,7 @@ func TestStructToMap_CopyStructWithPrivateFields_WithMapVisitor(t *testing.T) {
 			return fieldmask_utils.MapVisitorResult{}
 		}))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Time": unixTime,
 	}, dst)
 }
@@ -1828,7 +1829,7 @@ func TestStructToMap_MapVisitorVisitsOnlyFilteredFields(t *testing.T) {
 		Field3 int
 	}
 	src := &A{Field1: 42, Field2: "hello", Field3: 44}
-	dst := map[string]interface{}{}
+	dst := map[string]any{}
 	mask := fieldmask_utils.MaskFromString("Field1, Field2")
 	var visitedFields []string
 	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMapVisitor(
@@ -1848,7 +1849,7 @@ func TestStructToMap_WithMapVisitor_SkipsToNextField(t *testing.T) {
 		Field3 int
 	}
 	src := &A{Field1: 42, Field2: "hello", Field3: 44}
-	dst := map[string]interface{}{}
+	dst := map[string]any{}
 	mask := fieldmask_utils.MaskFromString("Field1, Field2")
 	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithMapVisitor(
 		func(_ fieldmask_utils.FieldFilter, _, _ reflect.Value,
@@ -1863,7 +1864,7 @@ func TestStructToMap_WithMapVisitor_SkipsToNextField(t *testing.T) {
 			return fieldmask_utils.MapVisitorResult{}
 		}))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{"Field1": 33, "Field2": "hello"}, dst)
+	assert.Equal(t, map[string]any{"Field1": 33, "Field2": "hello"}, dst)
 }
 
 func TestStructToStruct_CopySlice_WithDiffentItemKind(t *testing.T) {
@@ -1901,7 +1902,7 @@ func TestStructToMap_CopySlice_WithDiffentItemKind(t *testing.T) {
 		Field1: []int{1, 2, 3},
 		Field2: []string{"1", "2", "3"},
 	}
-	dst := map[string]interface{}{}
+	dst := map[string]any{}
 	const copySize int = 1
 	mask := fieldmask_utils.MaskFromString("Field1,Field2")
 	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
@@ -1912,7 +1913,7 @@ func TestStructToMap_CopySlice_WithDiffentItemKind(t *testing.T) {
 		}
 	}))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": []int{1},
 		"Field2": []string{"1", "2", "3"},
 	}, dst)
@@ -1959,7 +1960,7 @@ func TestStructToMap_CopySlice_WithDiffentItemType(t *testing.T) {
 		Field1: []int{1, 2, 3},
 		Field2: []AA{{1}, {2}, {3}},
 	}
-	dst := map[string]interface{}{}
+	dst := map[string]any{}
 	const copySize int = 1
 	mask := fieldmask_utils.MaskFromString("Field1,Field2")
 	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithCopyListSize(func(src *reflect.Value) int {
@@ -1970,9 +1971,9 @@ func TestStructToMap_CopySlice_WithDiffentItemType(t *testing.T) {
 		}
 	}))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": []int{1, 2, 3},
-		"Field2": []map[string]interface{}{{"Int": 1}},
+		"Field2": []map[string]any{{"Int": 1}},
 	}, dst)
 }
 
@@ -1990,11 +1991,11 @@ func TestStructToStruct_WithMultiTagComma(t *testing.T) {
 		Field int `json:"field,omitempty"`
 	}
 	var src = A{Field: 1}
-	var dst = map[string]interface{}{}
+	var dst = map[string]any{}
 	mask := fieldmask_utils.MaskFromString("Field")
 	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithTag("json"))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"field": 1,
 	}, dst)
 }
@@ -2002,28 +2003,28 @@ func TestStructToStruct_WithMultiTagComma(t *testing.T) {
 func TestStructToMap_WithInterface(t *testing.T) {
 	type user struct {
 		A string
-		B interface{}
-		C interface{}
+		B any
+		C any
 	}
 	type c struct {
 		A int
-		B interface{}
+		B any
 	}
 	mask := fieldmask_utils.MaskFromString("A,B,C")
 
 	src := &user{
 		A: "nick",
 		B: []int{1, 2, 3, 4},
-		C: c{A: 42, B: map[string]interface{}{"hi": 34}},
+		C: c{A: 42, B: map[string]any{"hi": 34}},
 	}
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithTag(`json`))
 	assert.Nil(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"A": "nick",
 		"B": []int{1, 2, 3, 4},
-		"C": map[string]interface{}{"A": 42, "B": map[string]interface{}{"hi": 34}},
+		"C": map[string]any{"A": 42, "B": map[string]any{"hi": 34}},
 	}
 	assert.Equal(t, expected, dst)
 }
@@ -2040,11 +2041,11 @@ func TestStructToMap_PtrToInt(t *testing.T) {
 		MyInt:    &myInt,
 		WhatEver: "hello",
 	}
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 	err := fieldmask_utils.StructToMap(mask, src, dst)
 	assert.Nil(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"MyInt":    int64(42),
 		"WhatEver": "hello",
 	}
@@ -2061,7 +2062,7 @@ func TestStructToMap_DifferentTypeWithSameDstKey(t *testing.T) {
 		FieldB []BB `json:"FieldA"`
 	}
 	var src1 = A1{FieldA: []int{1, 2}, FieldB: []BB{{1}, {2}}}
-	var dst1 = map[string]interface{}{}
+	var dst1 = map[string]any{}
 	mask := fieldmask_utils.MaskFromString("FieldA,FieldB")
 	err := fieldmask_utils.StructToMap(mask, src1, dst1, fieldmask_utils.WithTag("json"))
 	require.Error(t, err)
@@ -2071,7 +2072,7 @@ func TestStructToMap_DifferentTypeWithSameDstKey(t *testing.T) {
 		FieldB [2]BB `json:"FieldA"`
 	}
 	var src2 = A2{FieldA: [2]int{1, 2}, FieldB: [2]BB{{1}, {2}}}
-	var dst2 = map[string]interface{}{}
+	var dst2 = map[string]any{}
 	mask = fieldmask_utils.MaskFromString("FieldA,FieldB")
 	err = fieldmask_utils.StructToMap(mask, src2, dst2, fieldmask_utils.WithTag("json"))
 	require.Error(t, err)
@@ -2084,7 +2085,7 @@ func TestStructToMap_EmptySrcSlice_JsonEncode(t *testing.T) {
 	}
 
 	src := &B{[]*A{}}
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 
 	mask := fieldmask_utils.MaskFromString("As")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
@@ -2102,7 +2103,7 @@ func TestStructToMap_NilSrcSlice_JsonEncode(t *testing.T) {
 	}
 
 	src := &B{}
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 
 	mask := fieldmask_utils.MaskFromString("As")
 	err := fieldmask_utils.StructToMap(mask, src, dst)
@@ -2250,20 +2251,20 @@ func TestStructToMap_WithSrcTag(t *testing.T) {
 		},
 	}
 	mask := fieldmask_utils.MaskFromString("Field1,A{Field2}")
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 	err := fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithTag("json"), fieldmask_utils.WithSrcTag("db"))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1,
 	}, dst)
 
 	mask, _ = fieldmask_utils.MaskFromPaths([]string{"Field1", "another_name.some_field1", "another_name.some_field2"}, func(s string) string { return s })
-	dst = make(map[string]interface{})
+	dst = make(map[string]any)
 	err = fieldmask_utils.StructToMap(mask, src, dst, fieldmask_utils.WithTag("json"), fieldmask_utils.WithSrcTag("db"))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"Field1": src.Field1,
-		"another_name_json": map[string]interface{}{
+		"another_name_json": map[string]any{
 			"some_field1_json": src.A.Field2,
 			"some_field2_json": false,
 		},
@@ -2283,6 +2284,7 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 		Field2 []*E
 		Field3 []*E
 		Field4 []string
+		Field5 *timestamppb.Timestamp
 	}
 	src := &A{
 		Field1: "   42   ",
@@ -2291,15 +2293,20 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 			{Field1: "foo"},
 		},
 		Field4: []string{"   3.141   ", "-273.15"},
+		Field5: &timestamppb.Timestamp{
+			Seconds: 1780396738,
+			Nanos:   42,
+		},
 	}
 	type B struct {
 		Field1 int64
 		Field2 []*F
 		Field3 []*F
 		Field4 []float64
+		Field5 time.Time
 	}
 	dst := &B{}
-	mask := fieldmask_utils.MaskFromString("Field1,Field2,Field3,Field4")
+	mask := fieldmask_utils.MaskFromString("Field1,Field2,Field3,Field4,Field5")
 
 	// test original error due to no conversion
 	err := fieldmask_utils.StructToStruct(mask, src, dst)
@@ -2307,7 +2314,7 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 
 	// test conversion errors are critical
 	err = fieldmask_utils.StructToStruct(mask, src, dst,
-		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (interface{}, error) {
+		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (any, error) {
 			return nil, errors.New("dummy error")
 		}))
 	require.Error(t, err)
@@ -2315,7 +2322,7 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 
 	// test incompatible conversion still returns original error
 	err = fieldmask_utils.StructToStruct(mask, src, dst,
-		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (interface{}, error) {
+		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (any, error) {
 			return 3.14, nil
 		}))
 	require.Error(t, err)
@@ -2324,7 +2331,7 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 	// test successful conversion
 	err = fieldmask_utils.StructToStruct(mask, src, dst,
 		// convert string to int64
-		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (interface{}, error) {
+		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (any, error) {
 			data := src.Interface()
 
 			if src.Kind() != reflect.String ||
@@ -2340,7 +2347,7 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 			return strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
 		}),
 		// convert string to float64
-		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (interface{}, error) {
+		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (any, error) {
 			data := src.Interface()
 
 			if src.Kind() != reflect.String ||
@@ -2354,6 +2361,22 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 			}
 
 			return strconv.ParseFloat(strings.TrimSpace(raw), 64)
+		}),
+		// convert *timestamppb.Timestamp to time.Time
+		fieldmask_utils.WithConverterHook(func(src, dst *reflect.Value) (any, error) {
+			data := src.Interface()
+
+			if src.Kind() != reflect.TypeFor[*timestamppb.Timestamp]().Kind() ||
+				dst.Kind() != reflect.TypeFor[time.Time]().Kind() {
+				return data, nil
+			}
+
+			raw, ok := data.(*timestamppb.Timestamp)
+			if !ok {
+				return data, nil
+			}
+
+			return raw.AsTime(), nil
 		}))
 	require.NoError(t, err)
 	assert.Equal(t, &B{
@@ -2363,5 +2386,25 @@ func TestStructToStruct_WithConverterHook(t *testing.T) {
 			{Field1: "foo"},
 		},
 		Field4: []float64{3.141, -273.15},
+		Field5: time.Unix(1780396738, 42).UTC(),
 	}, dst)
+}
+
+func TestStructToStruct_ValueToPtr_WithUnrelatedHook(t *testing.T) {
+	type A struct{ Field int }
+	type B struct{ Field *int }
+
+	src := &A{Field: 42}
+	dst := &B{}
+	mask := fieldmask_utils.MaskFromString("Field")
+
+	// A no-op hook that does not apply to this field.
+	hook := fieldmask_utils.WithConverterHook(func(s, d *reflect.Value) (any, error) {
+		return s.Interface(), nil
+	})
+
+	err := fieldmask_utils.StructToStruct(mask, src, dst, hook)
+	require.NoError(t, err)
+	require.NotNil(t, dst.Field)
+	require.Equal(t, 42, *dst.Field)
 }

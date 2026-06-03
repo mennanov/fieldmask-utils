@@ -343,25 +343,25 @@ func TestStructToStruct_UnknownAnySubfieldMask(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 func TestStructToMap_Success(t *testing.T) {
-	userDst := make(map[string]interface{})
+	userDst := make(map[string]any)
 	mask := fieldmask_utils.MaskFromString(
 		"Id,Avatar{OriginalUrl},Tags,Images,Permissions,Friends{Images{ResizedUrl}}")
 	err := fieldmask_utils.StructToMap(mask, testUserFull, userDst)
 	require.Nil(t, err)
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"Id": testUserFull.Id,
-		"Avatar": map[string]interface{}{
+		"Avatar": map[string]any{
 			"OriginalUrl": testUserFull.Avatar.OriginalUrl,
 		},
 		"Tags": testUserFull.Tags,
-		"Images": []map[string]interface{}{
+		"Images": []map[string]any{
 			{"OriginalUrl": testUserFull.Images[0].OriginalUrl, "ResizedUrl": testUserFull.Images[0].ResizedUrl},
 			{"OriginalUrl": testUserFull.Images[1].OriginalUrl, "ResizedUrl": testUserFull.Images[1].ResizedUrl},
 		},
 		"Permissions": testUserFull.Permissions,
-		"Friends": []map[string]interface{}{
+		"Friends": []map[string]any{
 			{
-				"Images": []map[string]interface{}{
+				"Images": []map[string]any{
 					{"ResizedUrl": testUserFull.Friends[0].Images[0].ResizedUrl},
 					{"ResizedUrl": testUserFull.Friends[0].Images[1].ResizedUrl},
 				},
@@ -372,15 +372,15 @@ func TestStructToMap_Success(t *testing.T) {
 }
 
 func TestStructToMap_PartialProtoSuccess(t *testing.T) {
-	userDst := make(map[string]interface{})
+	userDst := make(map[string]any)
 	mask := fieldmask_utils.MaskFromString(
 		"Id,Avatar{OriginalUrl},Images,Username,Permissions,Name{MaleName}")
 	err := fieldmask_utils.StructToMap(mask, testUserPartial, userDst)
 	require.Nil(t, err)
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"Id":          testUserPartial.Id,
 		"Avatar":      nil,
-		"Images":      []map[string]interface{}{},
+		"Images":      []map[string]any{},
 		"Username":    testUserPartial.Username,
 		"Permissions": []testproto.Permission(nil),
 		"Name":        nil,
